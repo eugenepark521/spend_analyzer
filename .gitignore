@@ -1,0 +1,9 @@
+venv/
+.venv/
+raw/
+*.csv
+categories.local.yaml
+__pycache__/
+.env
+.DS_Store
+.Rhistory
