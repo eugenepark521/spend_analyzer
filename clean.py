@@ -32,7 +32,7 @@ FX_DISCOVER = re.compile(r"(\d+(?:\.\d+)?)\s*@\s*0*(\.\d+)\s*JPY", re.I)
 FX_CHASE = re.compile(r"Yen\s+(\d+)\s*X\s*([\d.]+)\s*\(EXCHG RTE\)", re.I)
 
 
-def load_chase(path: Path) -> pd.DataFrame:
+def load_chase(path: Path, resolver: Resolver) -> pd.DataFrame:
     df = pd.read_csv(path)
     assert list(df.columns) == ["Details", "Posting Date", "Description", "Amount", "Type"], \
         f"{path}: unexpected Chase columns {list(df.columns)}"
@@ -55,13 +55,15 @@ def load_chase(path: Path) -> pd.DataFrame:
         "description_raw": df["Description"],
         "source_type": df["Type"],
         "amount_raw": amount,
-        "amount": -amount,  # normalise: expenses positive, income/credits negative
+        # normalised to expenses positive via the source's declared sign
+        # convention (categories.yaml § 0) — not hardcoded per loader
+        "amount": resolver.to_spend_positive("chase", amount),
         "source_file": path.name,
     })
     return out
 
 
-def load_discover(path: Path) -> pd.DataFrame:
+def load_discover(path: Path, resolver: Resolver) -> pd.DataFrame:
     df = pd.read_csv(path)
     assert list(df.columns) == ["Trans. Date", "Post Date", "Description", "Amount", "Category"], \
         f"{path}: unexpected Discover columns {list(df.columns)}"
@@ -74,7 +76,7 @@ def load_discover(path: Path) -> pd.DataFrame:
         "description_raw": df["Description"],
         "source_type": df["Category"],
         "amount_raw": amount,
-        "amount": amount,  # Discover already has purchases positive
+        "amount": resolver.to_spend_positive("discover", amount),
         "source_file": path.name,
     })
     return out
@@ -122,9 +124,9 @@ def main():
 
     pulls: dict[str, dict[str, pd.DataFrame]] = {"chase": {}, "discover": {}}
     for path in sorted(RAW.glob("chase_*.csv")):
-        pulls["chase"][path.name] = load_chase(path)
+        pulls["chase"][path.name] = load_chase(path, resolver)
     for path in sorted(RAW.glob("discover_*.csv")):
-        pulls["discover"][path.name] = load_discover(path)
+        pulls["discover"][path.name] = load_discover(path, resolver)
     if not pulls["chase"] or not pulls["discover"]:
         sys.exit("missing chase or discover pulls in raw/")
 

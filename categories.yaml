@@ -12,6 +12,8 @@
 #   sample/categories.sample.yaml          the synthetic demo rule set, loaded
 #                                          instead of the local one when
 #                                          SPEND_CATEGORIES_LOCAL points at it.
+# `sources:` (§ 0) is tracked-only and NOT merged from an overlay — a sign
+# convention is a public property of a bank's export format, not personal data.
 # normalize.Resolver merges an overlay by APPENDING its list sections after the
 # tracked ones, so tracked rules always match first and the merged order is
 # stable. Without any overlay the pipeline still runs end to end; rows that
@@ -53,6 +55,23 @@ admin_categories:
   - Uncategorized   # unmatched or deliberately-unknowable (cash) — reported
 
 # ---------------------------------------------------------------------------
+# 0. Sources. Every account must declare which sign an OUTGOING amount carries
+#    in that source's OWN export, before the pipeline normalises everything to
+#    "expenses positive, income negative":
+#      negative -> the export writes debits/purchases as negative numbers
+#      positive -> the export writes purchases as positive numbers
+#
+#    This is the one per-source fact that cannot be defaulted. Getting it
+#    backwards silently inverts every total for that account — spend becomes
+#    income and income becomes spend — and nothing downstream can detect it,
+#    because both readings are internally consistent. An account missing from
+#    this map is a hard error rather than an assumption.
+sources:
+  chase:
+    spend_sign: negative
+  discover:
+    spend_sign: positive
+
 # 1. Transfers: NOT spending; would double-count card purchases or are pure
 #    account plumbing. Kept in output for reconciliation, excluded from totals.
 #    These are bank-generated strings, not merchant identities.

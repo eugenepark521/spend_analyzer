@@ -25,9 +25,10 @@
   Discover, with their opposite sign conventions), scrubbed through the
   project's own `ingest.py`. It deliberately reproduces the messiness the
   pipeline exists to handle: processor prefixes, store numbers, trailing
-  city/state, several raw spellings per merchant (253 raw descriptions
-  collapse to 49), two overlapping pulls per account for cross-pull dedupe,
-  peer payments both ways, a mid-series regime change (dorm → apartment), and
+  city/state, several raw spellings per merchant (a few hundred raw
+  descriptions collapse to a few dozen merchants), two overlapping pulls per
+  account for cross-pull dedupe, peer payments both ways, a mid-series regime
+  change (dorm → apartment), and
   two seeded high-side anomalies so the detector visibly fires. Every
   merchant, counterparty, amount, and date is invented.
 - **`build_sample.py` runs the real pipeline over it** and writes the tracked
@@ -136,8 +137,13 @@ fixture the task describes. Nothing was deleted.
 
 ## 3. Sign, currency, dates
 
-- Convention: **expenses positive, income/credits negative.** Chase (debits
-  negative) is flipped; Discover (purchases positive) is kept.
+- Convention: **expenses positive, income/credits negative.** Each source
+  declares its own convention once, in `categories.yaml` under `sources:`
+  (`spend_sign: negative|positive`); the loader flip and the peer-payment
+  direction both read that single declaration rather than restating it. An
+  account with no declaration raises — the two possible answers are each
+  internally consistent, and picking the wrong one inverts every total for
+  that account without anything downstream being able to notice.
 - Chase's `Details` DEBIT/CREDIT flag is **not authoritative**: a handful of
   merchant refunds are flagged DEBIT with positive amounts. The sign of `Amount` is
   trusted instead; `clean.py` asserts only that CREDIT rows are never

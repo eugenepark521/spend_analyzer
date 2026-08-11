@@ -141,6 +141,19 @@ class Resolver:
             (re.compile(m["match"], re.I), m["merchant"], m["category"])
             for m in raw["merchants"]
         ]
+        # Per-source sign convention (see categories.yaml § 0). Held as a
+        # lookup rather than a conditional so a new account is a config line,
+        # not a code edit — and so an undeclared account fails loudly instead
+        # of inheriting whichever branch happened to be the fallback.
+        self.spend_signs = {}
+        for name, cfg in (raw.get("sources") or {}).items():
+            sign = (cfg or {}).get("spend_sign")
+            if sign not in ("negative", "positive"):
+                raise ValueError(
+                    f"categories.yaml: sources.{name}.spend_sign must be "
+                    f"'negative' or 'positive', got {sign!r}")
+            self.spend_signs[name] = sign
+
         self.discover_fallback = dict(raw["discover_fallback"])
         # A set, so tracked + overlay order is irrelevant; absent tokens only
         # leave a trailing place name on unmatched merchants.
@@ -153,6 +166,38 @@ class Resolver:
         assert set(self.discover_fallback.values()) <= valid
         for d, a, c in self.tx_overrides:
             assert c in valid, f"override for ({d}, {a}) assigns unknown category {c!r}"
+
+    def spend_sign(self, source: str) -> str:
+        """Which sign an outgoing amount carries in `source`'s own export.
+        Unknown sources raise: the pipeline will not guess a convention whose
+        two possible answers are both self-consistent and one of which silently
+        inverts every total for that account."""
+        try:
+            return self.spend_signs[source]
+        except KeyError:
+            # ValueError, not KeyError: KeyError renders its message through
+            # repr(), which would collapse the snippet below into one line of
+            # literal \n escapes — unreadable exactly when it is needed.
+            raise ValueError(
+                f"source {source!r} has no sign convention declared. "
+                f"Add it to categories.yaml under `sources:`:\n"
+                f"    sources:\n"
+                f"      {source}:\n"
+                f"        spend_sign: negative   # or 'positive'\n"
+                f"Declared sources: {sorted(self.spend_signs) or 'none'}."
+            ) from None
+
+    def is_money_out(self, source: str, raw_amount: float) -> bool:
+        """True when `raw_amount`, in the source's own convention, is money
+        leaving the account."""
+        return (raw_amount < 0 if self.spend_sign(source) == "negative"
+                else raw_amount > 0)
+
+    def to_spend_positive(self, source: str, raw_amount):
+        """Convert a source's own convention to the internal one (expenses
+        positive, income/credits negative). Works on a scalar or a pandas
+        Series, so the clean stage and the resolver share one definition."""
+        return -raw_amount if self.spend_sign(source) == "negative" else raw_amount
 
     def _peer_details(self, description: str, cleaned: str, source: str,
                       source_type: str, raw_amount: float) -> Resolution:
@@ -183,12 +228,11 @@ class Resolver:
         else:
             counterparty, desc_dir = generic_merchant(cleaned, self.loc_tokens), ""
 
-        # Direction: source sign is authoritative, per that source's own
-        # convention (Chase raw: negative = money out; Discover raw: positive =
-        # money out). Cross-check against the description's to/from when
-        # present; a conflict means we do NOT guess.
-        money_out = raw_amount < 0 if source == "chase" else raw_amount > 0
-        sign_dir = "outgoing" if money_out else "incoming"
+        # Direction: the source's sign is authoritative, read through that
+        # source's declared convention (categories.yaml § 0). Cross-checked
+        # against the description's to/from when present; a conflict means we
+        # do NOT guess.
+        sign_dir = "outgoing" if self.is_money_out(source, raw_amount) else "incoming"
         if source == "chase" and source_type in self.peer_out and sign_dir != "outgoing":
             direction = "ambiguous"
         elif source == "chase" and source_type in self.peer_in and sign_dir != "incoming":
