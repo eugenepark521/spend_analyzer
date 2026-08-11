@@ -1,6 +1,6 @@
 # Dashboard design plan (task 18)
 
-Concept: **an audit, not a pitch.** Two years of a student's real spending,
+Concept: **an audit, not a pitch.** Two years of one household's spending,
 measured against comparable households, with the honest negatives stated
 plainly. The page should read like a signed-off report: quiet surfaces, one
 authoritative accent, provenance visible.
@@ -56,12 +56,13 @@ laptop, not phone).
 
 ## Signature element
 
-**The month strip**: all 25 coverage months as paired income (graphite) /
-spend (pine) bars, with the four partial-coverage months rendered as hollow
-slots at the ends — the data-coverage caveat made visible instead of
-footnoted. It spans the hero band and is the thing the page is remembered by.
-(Monthly savings *rate* bars were rejected: Feb 2026's −2,392% would flatten
-every other month; income-vs-spend pairs show the same story at honest scale.)
+**The month strip**: every coverage month as a paired income (graphite) /
+spend (pine) bar, with partial-coverage months rendered as hollow slots at the
+ends — the data-coverage caveat made visible instead of footnoted. It spans the
+hero band and is the thing the page is remembered by. (Monthly savings *rate*
+bars were rejected: when income arrives in lumps a single thin month produces a
+rate in the thousands of percent, which flattens every other bar; income-vs-
+spend pairs tell the same story at an honest scale.)
 
 ## Checks against the brief
 
@@ -71,7 +72,7 @@ every other month; income-vs-spend pairs show the same story at honest scale.)
 - Boldness spent in exactly one place: the ink hero tile with the −% savings
   figure. Everything else is quiet.
 - Copy is meaning-first: "Spending vs. comparable households", not "BLS CEX
-  reconciliation"; "Nothing unusual this month — 0 of 94 flagged", not
+  reconciliation"; "Nothing unusual this month — 0 of N flagged", not
   "empty result set".
 - Every number renders from `metrics.json` (env-swappable path); no analysis
   and no constants in components.

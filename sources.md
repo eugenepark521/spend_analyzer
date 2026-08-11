@@ -93,7 +93,7 @@ and pensions
 | Discover: Restaurants             | Food                                                            | BLS "Food" includes food away from home |
 | Discover: Merchandise             | *split* — Apparel and services, Entertainment, Miscellaneous  | Too coarse as-is; needs manual sub-classification per merchant in task 13 |
 | Discover: Travel/ Entertainment   | Entertainment                                                   | — |
-| Discover: Services                | *split* — Personal care products and services, Miscellaneous  | Depends what the service is (e.g. eyebrow threading vs. FedEx shipping) |
+| Discover: Services                | *split* — Personal care products and services, Miscellaneous  | Depends what the service is (e.g. a personal-care appointment vs. a shipping charge) |
 | Discover: Education               | Education                                                       | — |
 | Discover: Payments and Credits    | *excluded from spend analysis*                                 | These are payments to the card, not spending — must be filtered out before category totals, not mapped |
 | Chase: DEBIT_CARD                 | *split by merchant*                                             | Chase gives no category at all — every DEBIT_CARD row needs merchant-string classification in task 13 |

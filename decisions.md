@@ -64,17 +64,16 @@ and the rules file `categories.yaml`. Where a call was a coin-flip, the
 reasoning is spelled out so it can be reversed by editing `categories.yaml`
 without touching code.
 
-## 0. The missing 2026-07-29 pulls were recreated
+## 0. The missing earlier pull was recreated
 
-`raw/` was supposed to contain two pulls each of Chase and Discover
-(2026-07-29 and 2026-07-30) as the dedupe test case, but the 07-29 files were
-absent when this task started. The original bank exports were still in
-`~/Downloads` under their as-downloaded names, so I re-ran them through the
-project's
-own `ingest.py` (identical scrubbing) and renamed the outputs to the 07-29
-pull date. The recreated files are **byte-identical** (same SHA-256) to the
-07-30 pulls, which is exactly the "same underlying export pulled on different
-days" fixture the task describes. Nothing was deleted.
+`raw/` was supposed to contain two pulls each of Chase and Discover, a day
+apart, as the dedupe test case — but the earlier pull was absent when this
+task started. The original bank exports were still in `~/Downloads` under
+their as-downloaded names, so they were re-run through the project's own
+`ingest.py` (identical scrubbing) and the outputs renamed to the earlier pull
+date. The recreated files are **byte-identical** (same SHA-256) to the later
+pull, which is exactly the "same underlying export pulled on different days"
+fixture the task describes. Nothing was deleted.
 
 ## 1. Merchant normalisation
 
@@ -101,16 +100,19 @@ days" fixture the task describes. Nothing was deleted.
 - Zelle rows canonicalise to `ZELLE <counterparty>`; the counterparty is
   parsed from the **raw** description (junk stripping would eat phone-number
   counterparties), dropping exactly one trailing bank reference token
-  (`JPM99…`, `BAC…`, `WFCT…`, 11-digit refs). Phone-number counterparties are
-  kept as the identity (`ZELLE 714…9177`, masked here).
+  (`JPM99…`, `BAC…`, `WFCT…`, 11-digit refs). Where the counterparty is a
+  phone number rather than a name, that number is kept as the identity — it is
+  the only stable handle those rows have — which is one reason the resulting
+  merchant column never leaves this machine.
 - Result on this data: the rule set collapses roughly a thousand distinct raw
   descriptions to a few hundred canonical merchants — very close to a 3:1
   reduction (`clean.py` prints the exact counts and the top-20 collapse groups
   for whatever data it is run on).
-- Caveat: `Zelle payment to E.` (nickname form) and `Zelle payment from E. Y.`
-  (full-name form) remain distinct counterparties (`ZELLE E.` vs
-  `ZELLE E. Y.`) — merging nickname vs full-name identities felt riskier than
-  leaving them split.
+- Caveat: one counterparty appears both by first name alone and by full name,
+  and the two forms remain distinct canonical merchants. Merging nickname and
+  full-name identities felt riskier than leaving them split: the merge would
+  have to assume two strings are the same human, and getting that wrong
+  silently corrupts the dedupe key.
 
 ## 2. Dedupe across overlapping pulls
 
@@ -136,8 +138,8 @@ days" fixture the task describes. Nothing was deleted.
 
 - Convention: **expenses positive, income/credits negative.** Chase (debits
   negative) is flipped; Discover (purchases positive) is kept.
-- Chase's `Details` DEBIT/CREDIT flag is **not authoritative**: 4 merchant
-  refunds are flagged DEBIT with positive amounts. The sign of `Amount` is
+- Chase's `Details` DEBIT/CREDIT flag is **not authoritative**: a handful of
+  merchant refunds are flagged DEBIT with positive amounts. The sign of `Amount` is
   trusted instead; `clean.py` asserts only that CREDIT rows are never
   negative and prints a note about the refund rows.
 - Dates unified to ISO `YYYY-MM-DD`. Discover: transaction date is canonical
@@ -147,9 +149,10 @@ days" fixture the task describes. Nothing was deleted.
   can lag the actual transaction by a day or two.
 - Currency: no currency column exists in either export; both are
   USD-denominated. `clean.py` asserts every amount parses as a number **and**
-  cross-checks all 120 foreign-currency rows: the description embeds
+  cross-checks every foreign-currency row: the description embeds
   `foreign_amount × rate`, and the product must reproduce the USD amount
-  within $0.02. All 120 reconcile, proving `Amount` is already converted USD.
+  within $0.02. All of them reconcile, proving `Amount` is already converted
+  USD rather than needing conversion here.
 
 ## 4. Taxonomy: the 14 BLS categories + three admin buckets
 
@@ -168,12 +171,12 @@ exist, none of which enter the benchmark comparison:
 
 ## 5. Transfers vs peer payments — how they were told apart
 
-**Transfer** (excluded) = money moving between my own accounts or paying my
-own card, identifiable structurally:
+**Transfer** (excluded) = money moving between the holder's own accounts, or
+paying their own card, identifiable structurally:
 - `INTERNET PAYMENT - THANK YOU` / `RETURNED INTERNET PMT` (Discover card
   payments and a bounced payment),
 - `DISCOVER E-PAYMENT` (the same payments seen from the Chase side),
-- `Online Transfer to/from CHK …0750` (own checking accounts, Chase Type
+- online transfers to/from the holder's own checking account (Chase Type
   ACCT_XFER),
 - `ACCTVERIFY` / landlord-portal penny-test micro-deposits,
 - `ATM CASH DEPOSIT` (cash entering the account is funding, not income),
@@ -185,8 +188,8 @@ own card, identifiable structurally:
 P2P rail: Chase Types QUICKPAY_DEBIT / CHASE_TO_PARTNERFI (outgoing) and
 QUICKPAY_CREDIT / PARTNERFI_TO_CHASE (incoming), plus Venmo, Wise, and Apple
 Cash rows (see §6). The distinguishing test: transfers move money between
-accounts *I* own or settle *my own* card; peer payments have a counterparty
-who isn't me.
+accounts the holder owns, or settle their own card; peer payments have a
+counterparty who is someone else.
 
 ## 6. Peer payments
 
@@ -215,17 +218,17 @@ who isn't me.
 
 ## 7. Category calls that follow BLS definitions but look surprising
 
-- **Laundromats** (WASH LAUNDRY, CSC ServiceWorks) → *Apparel and services*
+- **Laundromats and coin-laundry service operators** → *Apparel and services*
   (BLS puts laundry/dry-cleaning there, not Housing).
-- **USPS / FedEx** → *Housing* (BLS: postage & stationery under housekeeping).
+- **Postal and courier services** → *Housing* (BLS: postage & stationery
+  under housekeeping).
 - **Hotels** → *Housing* (BLS: "other lodging").
 - **Cellular / travel eSIM** → *Housing* (BLS: telephone services
   under utilities).
-- **Sports betting** (three daily-fantasy apps, including deposits routed
-  through a payment processor) → *Entertainment*, with payouts (the
+- **Sports betting / daily-fantasy apps**, including deposits routed through a
+  payment processor → *Entertainment*, with payouts (the
   `REAL TIME PAYMENT … FROM:` credits) as negative Entertainment, so the
-  category
-  nets to true gambling loss — matching BLS's net-loss treatment.
+  category nets to true gambling loss — matching BLS's net-loss treatment.
 - **Tuition refund** (a university `TUITIONREF` credit) → negative *Education*,
   offsetting the tuition charge it reverses (not Income).
 
@@ -248,14 +251,18 @@ who isn't me.
   services: one name literally means "used clothing" in the local language,
   another is a known vintage chain, and the cluster (same city district, same
   trip, clothing-sized amounts in local currency) makes vintage-shopping the
-  coherent reading. This is the least certain block of rules — it moves ≈$1.4k
-  into Apparel.
-- **Discover miscategorisations corrected by rules**: UCD MU GAMES AREA
-  (Education → Entertainment), MONARCH FUN ZONE (Medical Services →
-  Entertainment), restaurants filed under Merchandise (Pho Oishii, Eggdrop,
-  Tamagoken, Shinpachi, Present Coffee, Utts Cafe, Upper Crust, Pita Kabob →
-  Food), UCD STORES MBS-MARKET (snacks → Food) vs MBS MAIN (bookstore →
-  Education).
+  coherent reading. This is the least certain block of rules, and it moves a
+  material amount into Apparel — enough to change that category's benchmark
+  comparison, which is why the uncertainty is recorded here.
+- **Card-assigned categories corrected by rules.** The card issuer's own
+  category is wrong often enough that merchant rules have to outrank it, and
+  the errors fall into recognisable shapes: a campus games/arcade venue filed
+  as Education (→ Entertainment); a family entertainment centre filed as
+  Medical Services (→ Entertainment); a run of restaurants and cafes filed as
+  generic Merchandise (→ Food); and two outlets of the same campus retail
+  operator that need opposite treatment — its convenience/snack shop → Food,
+  its bookstore → Education — which is why the rules match the specific outlet
+  string rather than the operator.
 - **Card refunds filed under "Payments and Credits"** (marketplace, retail,
   food-delivery and event-ticket returns) are matched by merchant rules *after*
   the two true card-payment patterns, so they net against their real
@@ -301,10 +308,11 @@ who isn't me.
   amounts. The override forces only the *category*; peer rows keep their
   merchant/counterparty/direction, so dedupe keys in clean.py and
   zelle_review.csv membership are unaffected. A (date, amount) collision
-  with an unrelated same-day row would mis-tag it — checked at add time
-  (these three dates have no other row at the same amount).
+  with an unrelated same-day row would mis-tag it — checked at add time, and
+  now asserted at run time (categorize.py fails unless each override matches
+  exactly one row).
 
-## 9. Reconciliation findings (2026-08-05 run)
+## 9. Reconciliation findings
 
 - **Zero-dollar BLS categories.** Healthcare, Cash contributions, and Personal
   insurance and pensions all show $0. This is plausible rather than a pipeline

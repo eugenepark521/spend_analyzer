@@ -55,7 +55,7 @@ Failure scenario: Confirmed with current data (the two accounts' histories start
 ### line 56 — PLAUSIBLE
 Q1's prior-window slice full_months[-12:-6] crashes or silently shrinks with fewer than 12 full months, and the aggregate rate divides by income with no zero guard (unlike the per-month loop)
 
-Failure scenario: With <=6 full months, [-12:-6] is [] and months[0] raises IndexError; with 7-11 it silently compares a shorter 'prior 6 months' window. A window with zero Income rows raises ZeroDivisionError on 100*(inc-sp)/inc; one with negative net income (see the marketplace mis-tag above) prints a sign-flipped rate. The current full-month count masks all of it; any rerun on a shorter export triggers it.
+Failure scenario: With <=6 full months, [-12:-6] is [] and months[0] raises IndexError; with 7-11 it silently compares a shorter 'prior 6 months' window. A window with zero Income rows raises ZeroDivisionError on 100*(inc-sp)/inc; one with negative net income (see the two-sided merchant mis-tag above) prints a sign-flipped rate. The current full-month count masks all of it; any rerun on a shorter export triggers it.
 
 ### line 75 — PLAUSIBLE
 Q2 divides each category total by `over` (actual minus budget), which can be zero or negative
