@@ -16,9 +16,10 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from config import DOWNLOADS_DIR
 from ingest import dest_path, ingest_file
 
-DOWNLOADS = Path("~/Downloads").expanduser()
+DOWNLOADS = DOWNLOADS_DIR
 
 
 def find_source(pattern: str) -> Path | None:

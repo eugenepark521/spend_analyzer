@@ -10,6 +10,9 @@ no edits and no risk of overwriting real outputs.
 import os
 from pathlib import Path
 
+# Where the collectors look for freshly-downloaded bank exports.
+DOWNLOADS_DIR = Path(os.environ.get("SPEND_DOWNLOADS_DIR", "~/Downloads")).expanduser()
+
 # Scrubbed bank exports in (clean.py globs <account>_*.csv here).
 RAW_DIR = Path(os.environ.get("SPEND_RAW_DIR", "raw"))
 
