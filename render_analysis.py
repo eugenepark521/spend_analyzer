@@ -5,7 +5,8 @@ analysis.md answers questions.md. Every number in it comes from the metrics
 file, and every claim that could differ between datasets (which categories are
 above benchmark, whether volatility rose or fell, how many anomalies fired) is
 derived here rather than asserted — so the same renderer produces the tracked
-synthetic document and my own local one, and neither can drift from its data.
+synthetic document and the author's local one, and neither can drift from
+its data.
 
 The methodology prose (why anomaly detection over forecasting, what would make
 the method wrong) is dataset-independent and lives in this file as template
@@ -193,6 +194,14 @@ def render(M: dict) -> str:
                          for a, s in sorted(spans.items()))
 
     is_sample = meta.get("dataset") == "sample"
+    # Voice: first person for the author's own data, neutral third person for
+    # the published synthetic copy, so sample figures can never be mistaken
+    # for a real person's spending.
+    SUBJ = "this dataset" if is_sample else "I"
+    POSS = "the dataset's" if is_sample else "my"
+    POSS_LOW = "the dataset's" if is_sample else "my"
+    OF_MINE = "in the dataset" if is_sample else "of mine"
+    IS_ARE = "is" if is_sample else "am"
     provenance = (
         "**Every figure below comes from the synthetic sample dataset** "
         "(`build_sample.py`) — invented transactions, not anyone's real "
@@ -254,7 +263,7 @@ Against the {money(q2['budget_monthly'])}/month total budget (pro-rated to
 ## 3. Category split vs. BLS benchmark
 
 Comparing full-history spending shares against the under-25, <$15k-income BLS
-CEX cell: I am **above** benchmark share in """
+CEX cell: {SUBJ} {IS_ARE} **above** benchmark share in """
     doc += joined([f"{c['category']} ({signed_pp(c['diff_pp'])}, "
                    f"{pct(c['my_share'])} vs {pct(c['bls_share'])})"
                    if c is top_above else
@@ -262,15 +271,15 @@ CEX cell: I am **above** benchmark share in """
                    for c in above[:5]])
     doc += ", and **below** in "
     doc += joined([f"{c['category']} ({signed_pp(c['diff_pp'])})" for c in below[:3]])
-    doc += (f", with {pct(q3['uncategorized']['share'])} of my spending sitting "
-            f"in Uncategorized, which has no BLS counterpart.\n")
+    doc += (f", with {pct(q3['uncategorized']['share'])} of {POSS_LOW} spending "
+            f"sitting in Uncategorized, which has no BLS counterpart.\n")
 
     doc += f"""
 ## 4. Fixed vs. discretionary spend vs. benchmark
 
 Defining fixed = {joined([c.lower() for c in q4['fixed_categories']])} (a
 judgement call: committed obligations; everything else, including
-Uncategorized, counts as discretionary), my split is
+Uncategorized, counts as discretionary), {POSS} split is
 **{pct(q4['mine']['fixed_share'])} fixed / {pct(100 - q4['mine']['fixed_share'])}
 discretionary** ({money(q4['mine']['fixed'], 2)} of
 {money(q4['mine']['total'], 2)}) versus the benchmark household's
@@ -341,7 +350,7 @@ baked silently into a forecast.
 
 - **Thin categories inherit the wrong yardstick**: a category below the
   n≥{q5['min_n']} minimum scores against the global pool, so its scores mean
-  "large for any transaction of mine", not "large for rent" or "large for
+  "large for any transaction {OF_MINE}", not "large for rent" or "large for
   tuition" — which is why routine lumpy payments can flag retrospectively.
 - **A regime change inside the baseline is only half-handled**: if the baseline
   spans two spending patterns, its category distributions become bimodal, the

@@ -2,10 +2,10 @@
 
 ## categories.yaml
 
-### resale-marketplace income pattern — CONFIRMED
-An unanchored income pattern for a resale marketplace's ACH seller payout also matches that marketplace's card PURCHASES, misclassifying real spend as Income
+### two-sided merchant income pattern — CONFIRMED
+An unanchored income pattern for a merchant that is BOTH an income source and a spending destination also matches that merchant's card purchases, misclassifying real spend as Income
 
-Failure scenario: Confirmed in the categorized output: two card purchases at the marketplace are tagged Income (matched_rule=income) because income patterns run before merchant rules and the purchase description shares the payout prefix after strip_junk. Several hundred dollars of Apparel spend vanishes from every spend total (BLS reconciliation, Q2 budget, Q3 shares) while simultaneously subtracting from monthly income in Q1's savings rate — a double distortion. Fixed by anchoring the payout pattern with `$` so only the exact ACH form matches.
+Failure scenario: Confirmed in the categorized output: card purchases at the merchant are tagged Income (matched_rule=income) because income patterns run before merchant rules, and after strip_junk the purchase description shares a prefix with the inbound-payment description. The purchase amounts vanish from every spend total (BLS reconciliation, Q2 budget, Q3 shares) while simultaneously subtracting from monthly income in Q1's savings rate — a double distortion, and the general hazard whenever one counterparty appears on both sides of the ledger. Fixed by anchoring the inbound pattern with `$` so only the exact ACH form matches.
 
 ## clean.py
 

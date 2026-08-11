@@ -12,7 +12,7 @@
   credits (deposits, incoming transfers) are positive
 - Type values observed: DEBIT_CARD, CHASE_TO_PARTNERFI, FEE_TRANSACTION,
   QUICKPAY_DEBIT, ACH_CREDIT, ACH_DEBIT
-- History available: 07/29/2024 – 07/28/2026 (~2 years)
+- History available: roughly two years, ending at the pull date
 
 ### Discover (card activity)
 - Export path: manually downloaded from discover.com →
@@ -27,7 +27,11 @@
   Travel/Entertainment, Services, Education, Payments and Credits, etc.)
   — a useful head start for the taxonomy in part (c), but needs mapping
   onto whatever taxonomy is chosen since it won't match BLS categories directly
-- History available: 09/17/2024 – 07/23/2026 (~2 years)
+- History available: roughly two years, ending at the pull date. This
+  account's history starts some weeks LATER than the other's, so the two
+  coverage windows do not align — the analysis stage therefore treats a month
+  as "full" only when it lies strictly inside both accounts' windows, and
+  excludes the partial months at either end.
 
 ## (b) Benchmark
 
@@ -46,13 +50,13 @@
 - Contents: mean annual expenditure, % share of total spend, and
   standard error across BLS's 14 major expenditure categories, for
   consumer units matching the age × income filter above
-- Caveat: my actual funding is largely FAFSA disbursements (loan/grant
-  proceeds), not earned income in BLS's sense. I'm filtering to the
-  lowest income bracket as the closest available proxy for a
-  low-cash-inflow young adult, not because it's a precise income
-  match — BLS's "income before taxes" measures earned income, which
-  doesn't capture how I'm actually funded. Flagging this now so it's
-  not a surprise when discussed in task 14's analysis.
+- Caveat: the lowest income bracket is used as the closest available proxy
+  for a low-cash-inflow young adult, not because it is a precise income
+  match. BLS's "income before taxes" measures *earned* income, so any inflow
+  that is not earnings — transfers, aid, loan proceeds — is invisible to the
+  bracket while still funding real spending. The benchmark is therefore a
+  reference cohort, not a claim of equivalence. Flagged here so it is not a
+  surprise in the analysis stage.
   
 ### Access note (found in task 8)
 BLS blocks automated requests (curl, scripts) via Akamai bot protection —

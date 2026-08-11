@@ -38,19 +38,19 @@ $3,014.99 (20.7%)** are the top three contributors.
 ## 3. Category split vs. BLS benchmark
 
 Comparing full-history spending shares against the under-25, <$15k-income BLS
-CEX cell: I am **above** benchmark share in Food (+7.0pp, 20.9% vs 13.9%),
-Healthcare (+2.4pp), Miscellaneous (+2.2pp), Housing (+2.0pp), and Education
-(+1.6pp), and **below** in Transportation (−6.8pp), Personal insurance and
-pensions (−2.4pp), and Entertainment (−2.1pp), with 1.5% of my spending
-sitting in Uncategorized, which has no BLS counterpart.
+CEX cell: this dataset is **above** benchmark share in Food (+7.0pp, 20.9% vs
+13.9%), Healthcare (+2.4pp), Miscellaneous (+2.2pp), Housing (+2.0pp), and
+Education (+1.6pp), and **below** in Transportation (−6.8pp), Personal
+insurance and pensions (−2.4pp), and Entertainment (−2.1pp), with 1.5% of the
+dataset's spending sitting in Uncategorized, which has no BLS counterpart.
 
 ## 4. Fixed vs. discretionary spend vs. benchmark
 
 Defining fixed = housing, healthcare, personal insurance and pensions, and
 education (a judgement call: committed obligations; everything else, including
-Uncategorized, counts as discretionary), my split is **66.4% fixed / 33.6%
-discretionary** ($49,328.59 of $74,265.31) versus the benchmark household's
-**62.8% fixed / 37.2% discretionary** ($15,733 of $25,041).
+Uncategorized, counts as discretionary), the dataset's split is **66.4% fixed
+/ 33.6% discretionary** ($49,328.59 of $74,265.31) versus the benchmark
+household's **62.8% fixed / 37.2% discretionary** ($15,733 of $25,041).
 
 ## 5. Anomalous transactions this month
 
@@ -116,7 +116,7 @@ confound baked silently into a forecast.
 
 - **Thin categories inherit the wrong yardstick**: a category below the
   n≥30 minimum scores against the global pool, so its scores mean
-  "large for any transaction of mine", not "large for rent" or "large for
+  "large for any transaction in the dataset", not "large for rent" or "large for
   tuition" — which is why routine lumpy payments can flag retrospectively.
 - **A regime change inside the baseline is only half-handled**: if the baseline
   spans two spending patterns, its category distributions become bimodal, the

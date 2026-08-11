@@ -48,10 +48,10 @@
 
 ## 2026-08-10: personal matching rules moved to categories.local.yaml
 
-Tracked files now contain no identifiable counterparty names (initials only in
-docs/comments). The three rule blocks that must match real names or real
-transaction details — the family-support Zelle income pattern, the H.P. peer
-override, and all transaction_overrides — live in `categories.local.yaml`
+Tracked files now contain no identifiable counterparty names. The three rule
+blocks that must match real names or real transaction details — a recurring
+inbound-support income pattern, a peer override, and all
+transaction_overrides — live in `categories.local.yaml`
 (gitignored), which `normalize.Resolver` merges at load by appending local
 list sections after the tracked ones. Without the file the pipeline still
 runs; those rows just fall back to the peer Miscellaneous default. Verified
@@ -103,8 +103,10 @@ days" fixture the task describes. Nothing was deleted.
   counterparties), dropping exactly one trailing bank reference token
   (`JPM99…`, `BAC…`, `WFCT…`, 11-digit refs). Phone-number counterparties are
   kept as the identity (`ZELLE 714…9177`, masked here).
-- Result on this data: **950 distinct raw descriptions → 337 canonical
-  merchants** (top-20 collapse groups printed by `clean.py`).
+- Result on this data: the rule set collapses roughly a thousand distinct raw
+  descriptions to a few hundred canonical merchants — very close to a 3:1
+  reduction (`clean.py` prints the exact counts and the top-20 collapse groups
+  for whatever data it is run on).
 - Caveat: `Zelle payment to E.` (nickname form) and `Zelle payment from E. Y.`
   (full-name form) remain distinct counterparties (`ZELLE E.` vs
   `ZELLE E. Y.`) — merging nickname vs full-name identities felt riskier than
@@ -124,9 +126,11 @@ days" fixture the task describes. Nothing was deleted.
   same-day identical taco-shop charges, and a software subscription's
   double-charge (two identical debits on consecutive days plus four reversal
   rows) all survive intact.
-- Test case asserted in `clean.py`: Chase 668+668 rows → 668; Discover
-  520+520 → 520. The script fails loudly if dedupe doesn't collapse back to
-  the single-pull count.
+- Test case asserted in `clean.py`: two byte-identical pulls of the same
+  account must collapse back to one pull's row count exactly. The script fails
+  loudly if they don't. (The general invariant it now checks is per-key
+  multiplicity == max within-pull multiplicity, so a later pull that adds new
+  rows still passes.)
 
 ## 3. Sign, currency, dates
 
@@ -154,9 +158,8 @@ assigning any other name fails an assertion). Three non-BLS admin buckets
 exist, none of which enter the benchmark comparison:
 
 - **Transfer** — excluded from spend, kept for balance reconciliation.
-- **Income** — payroll from several part-time employers, FAFSA/financial-aid
-  disbursements from the university, and payouts from resale marketplaces.
-  The task did not name this bucket, but these
+- **Income** — payroll credits, education-related disbursements, and
+  marketplace payouts. The task did not name this bucket, but these
   rows are neither spending nor account-to-account transfers; mapping them to
   any BLS category would wrongly net spend down, and calling them "Transfer"
   would corrupt balance reconciliation. Deliberate addition — flagged here.
@@ -201,13 +204,14 @@ who isn't me.
   whose spending never appears in these exports, so excluding them would
   undercount. This includes Apple Cash *top-ups* (outgoing) and Apple Cash →
   bank transfers (incoming, netting back). All land in `zelle_review.csv`.
-- All 266 peer rows are in `clean/zelle_review.csv`, sorted by |amount|.
+- Every peer row is written to `clean/zelle_review.csv`, sorted by |amount|.
   **Warning worth reading:** incoming peer money far exceeds outgoing, so the
   Miscellaneous bucket nets to a large negative and shows as negative in the
-  category table. Large incoming Zelle (e.g. C.L.
-  $1–2k monthly, R.O.'s many repayments) may actually be rent-share or
-  income-like flows rather than "repaying me for consumption" — hand-tagging
-  the big rows in the review file matters more than any other refinement.
+  category table. The largest inbound peer flows — a recurring monthly
+  transfer, and one counterparty's many small repayments — may actually be
+  rent-share or income-like rather than "repaying me for consumption", which
+  is a different economic event. Hand-tagging the big rows in the review file
+  matters more than any other refinement.
 
 ## 7. Category calls that follow BLS definitions but look surprising
 
@@ -275,20 +279,23 @@ who isn't me.
   to guess — they surface in the categorize.py top-20 report for hand-tagging,
   and the rules themselves live in the overlay.
 - **Fees** (Chase FX adjustment fees, non-Chase ATM fees) → Miscellaneous.
-- **C.L. Zelles** (mom — rent support, a five-figure annual total) → Income via
-  `income_patterns`, so they're excluded from spend entirely instead of
-  netting spend down through the peer Miscellaneous default. Side effect:
+- **Regular incoming support from one counterparty** → Income via
+  `income_patterns`, so those rows are excluded from spend entirely instead of
+  netting spend down through the peer Miscellaneous default. The judgement:
+  recurring inbound transfers that fund living costs are an income stream, not
+  a reimbursement for something bought. Side effect:
   income-path rows take the generic merchant, so BAC/JPM bank refs that the
   peer path would have stripped survive in the merchant column for these
   rows (cosmetic only; income is excluded from spend and dedupe is
   unaffected since the refs are stable across pulls).
-- **A one-off peer payment to H.P.** → Transportation via `peer.overrides`
-  (a ride-share reimbursement).
+- **A one-off peer payment** → Transportation via `peer.overrides`, where the
+  purpose was known to be a ride-share reimbursement even though the
+  description says only who was paid.
 - **Transaction overrides** (`transaction_overrides` in categories.yaml,
   matched after income, before peer detection): hand-tags for single rows
-  identified by exact (date, |amount|) — currently three peer rent payments
-  to two housemates, all Housing. The amounts and dates are real transaction
-  details, so the entries live in the gitignored overlay rather than here.
+  identified by exact (date, |amount|) — currently a small number of peer rent
+  payments, all Housing. The amounts and dates are real transaction details,
+  so the entries live in the gitignored overlay rather than here.
   Amount matches on absolute
   value so the spend-positive yaml values work against Chase's negative raw
   amounts. The override forces only the *category*; peer rows keep their
@@ -300,19 +307,18 @@ who isn't me.
 ## 9. Reconciliation findings (2026-08-05 run)
 
 - **Zero-dollar BLS categories.** Healthcare, Cash contributions, and Personal
-  insurance and pensions all show $0 in my data. This is plausible rather than
-  a pipeline gap: as a student I'm likely still covered under a parent's health
-  insurance, don't make independent cash contributions (e.g. charitable giving,
-  support to other households), and don't have my own insurance/pension
-  payments. Noting this explicitly so it reads as a finding, not a missing
+  insurance and pensions all show $0. This is plausible rather than a pipeline
+  gap: these are categories a low-income young adult may genuinely not pay out
+  of their own accounts — health cover, insurance and pension contributions
+  are often carried elsewhere at this life stage, and independent charitable
+  giving is rare. Noting it explicitly so it reads as a finding, not a missing
   category.
-- **Total spend vs. benchmark.** My annualized total spend comes in below the
-  BLS benchmark average for the under-25, <$15k income cohort. Two categories
-  account for most of the divergence in the other direction — apparel and
-  education — both consistent with being a student. I have not independently
-  verified whether the lower total reflects genuinely lower spending or
-  incomplete capture (e.g. cash transactions not passing through either
-  account). Flagging as an open question rather than resolving it here.
+- **Total spend vs. benchmark.** Annualised total spend comes in below the
+  BLS benchmark average for the under-25, <$15k income cohort. A couple of
+  categories account for most of the divergence in the other direction. It is
+  not independently verified whether the lower total reflects genuinely lower
+  spending or incomplete capture (e.g. cash transactions never passing through
+  either account). Flagged as an open question rather than resolved here.
   (The tracked figures live in the generated `analysis.md`, which is built
   from the synthetic sample; the real ones stay in `analysis.local.md`.)
 - **Uncategorized total.** A single-digit percentage of spend remains
@@ -327,8 +333,9 @@ who isn't me.
 - Chase dates are posting dates (see §3) — same-merchant dedupe across banks
   is unaffected (key includes account), but day-level analysis mixes
   transaction dates (Discover) with posting dates (Chase).
-- The benchmark's income filter (<$15k earned income) is a proxy, not a
-  match, for FAFSA-funded reality — already flagged in sources.md.
+- The benchmark's income filter (<$15k *earned* income) is a proxy, not a
+  match, for a household funded substantially by non-earnings inflows —
+  already flagged in sources.md.
 - Alcohol/Tobacco/Reading are only visible when the merchant is a dedicated
   store (liquor store, smoke shop, bookstore); alcohol inside restaurant and
   supermarket bills is invisible, so those categories are floors, not totals.

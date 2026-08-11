@@ -48,8 +48,8 @@ bls_categories:
   - Personal insurance and pensions
 
 admin_categories:
-  - Transfer        # movements between my own accounts / card payments — excluded
-  - Income          # payroll, FAFSA disbursements, marketplace payouts — excluded
+  - Transfer        # movements between the holder's own accounts / card payments
+  - Income          # payroll, disbursements, payouts — excluded from spend
   - Uncategorized   # unmatched or deliberately-unknowable (cash) — reported
 
 # ---------------------------------------------------------------------------
@@ -59,7 +59,7 @@ admin_categories:
 transfer_patterns:
   - 'INTERNET PAYMENT - THANK YOU'      # card payment from checking
   - 'RETURNED INTERNET PMT'             # ...and its bounce reversal
-  - '^ONLINE TRANSFER (TO|FROM) CHK'    # between my own accounts
+  - '^ONLINE TRANSFER (TO|FROM) CHK'    # between the holder's own accounts
   - '^DISCOVER\s+E-PAYMENT'             # paying the card from checking
   - 'ACCTVERIFY'                        # payroll-provider penny verification
   - 'PENNY TEST'                        # landlord portal penny test
@@ -68,8 +68,9 @@ transfer_patterns:
   - '^CASHBACK BONUS REDEMPTION'
 
 # 2. Income: money earned/received, not consumption. Excluded from spend.
-#    Employer, university and marketplace names identify me, so those patterns
-#    live in the overlay; only the generic payroll match is tracked.
+#    Real income patterns name the specific institutions paying the account
+#    holder, so they live in the overlay; only the generic payroll match is
+#    tracked.
 income_patterns:
   - 'PAYROLL'                           # any employer's payroll ACH credit
 
@@ -98,11 +99,11 @@ peer:
   overrides: []                         # named counterparties -> overlay
 
 # Location tokens (not part of the matching precedence): trailing place names
-#    stripped from the generic merchant
-#    fallback (rule-matched merchants never reach it). Only two-letter state
-#    codes are tracked — the city, ward and country tokens in my own data say
-#    where I live and travel, so they live in the overlay. Missing tokens are
-#    cosmetic only: an unmatched merchant keeps its trailing place name.
+#    stripped from the generic merchant fallback (rule-matched merchants never
+#    reach it). Only two-letter state codes are tracked; a real dataset's city
+#    and country tokens describe where its account holder lives and travels,
+#    so those live in the overlay. Missing tokens are cosmetic only — an
+#    unmatched merchant simply keeps its trailing place name.
 location_tokens:
   - CA
   - CO
