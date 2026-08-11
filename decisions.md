@@ -68,9 +68,9 @@ without touching code.
 
 `raw/` was supposed to contain two pulls each of Chase and Discover
 (2026-07-29 and 2026-07-30) as the dedupe test case, but the 07-29 files were
-absent when this task started. The original exports were still in
-`~/Downloads` (`Chase0399_Activity_20260729.csv`,
-`Discover-AllAvailable-20260728.csv`), so I re-ran them through the project's
+absent when this task started. The original bank exports were still in
+`~/Downloads` under their as-downloaded names, so I re-ran them through the
+project's
 own `ingest.py` (identical scrubbing) and renamed the outputs to the 07-29
 pull date. The recreated files are **byte-identical** (same SHA-256) to the
 07-30 pulls, which is exactly the "same underlying export pulled on different
@@ -83,16 +83,18 @@ days" fixture the task describes. Nothing was deleted.
 - Two layers:
   1. **Junk stripping** (`normalize.strip_junk`) removes payment-processor
      noise before any matching: `APPLE PAY ending in [XXXX]`, redaction
-     tokens from ingest, FX conversion tails (`5680.00 @ 0.0061788 JPY`,
-     `Yen 536 X 0.006194 (EXCHG RTE)`), `WEB/PPD/CCD ID` references, Stripe
-     `ST-…` payout refs, trailing `MM/DD` dates (including glued forms like
-     `06/26KATSUSHIK`), phone numbers, and digit runs ≥5 (store numbers,
+     tokens from ingest, FX conversion tails (both the `<amount> @ <rate>
+     <CUR>` and `Yen <amount> X <rate> (EXCHG RTE)` forms), `WEB/PPD/CCD ID`
+     references, Stripe
+     `ST-…` payout refs, trailing `MM/DD` dates (including forms glued to a
+     following place name), phone numbers, and digit runs ≥5 (store numbers,
      register/receipt IDs).
   2. **Canonicalisation**: an ordered regex rule list in `categories.yaml`
-     maps cleaned descriptions to a canonical merchant (`SQ *DAVIS CREAMERY…`
-     and `SQ *DAVIS CREAMERY Davis CA 0001…` → `DAVIS CREAMERY`; Chase
-     `PP*SPOTIFYUSAI` and Discover `SPOTIFY P3…` → `SPOTIFY`). Rows matching
-     no rule fall back to a generic cleaner that strips processor prefixes
+     maps cleaned descriptions to a canonical merchant — e.g. a Square-
+     prefixed cafe charge and the same cafe with a trailing city/store number
+     collapse to one name, and a subscription billed through PayPal on one
+     card and directly on the other collapses to the service's own name. Rows
+     matching no rule fall back to a generic cleaner that strips prefixes
      (`SQ *`, `TST*`, `DD *`, `PP*`, `SP `, `SPO*`, `PY *`, `CTLP*`,
      `CASH APP*`, `PAYPAL *`, …) and trailing city/state/ward tokens from a
      curated list.
@@ -118,9 +120,10 @@ days" fixture the task describes. Nothing was deleted.
   pull, all N are kept (each row gets a rank 0..N-1 within its pull; dedupe
   keeps, per (key, rank) slot, the row from the latest pull). Final
   multiplicity per key = max multiplicity seen in any single pull.
-  Verified on real cases: the two same-day $5.00 SPIN scooter rides, the two
-  same-day $10.93 ANYS TACOS charges, and the CLICKUP double-charge
-  (2 × −$29 on consecutive days plus 4 reversal rows) all survive intact.
+  Verified on real cases: two same-day identical scooter-share rides, two
+  same-day identical taco-shop charges, and a software subscription's
+  double-charge (two identical debits on consecutive days plus four reversal
+  rows) all survive intact.
 - Test case asserted in `clean.py`: Chase 668+668 rows → 668; Discover
   520+520 → 520. The script fails loudly if dedupe doesn't collapse back to
   the single-pull count.
@@ -151,9 +154,9 @@ assigning any other name fails an assertion). Three non-BLS admin buckets
 exist, none of which enter the benchmark comparison:
 
 - **Transfer** — excluded from spend, kept for balance reconciliation.
-- **Income** — payroll (ChipGril, Naya Dessert Cafe, Target, Handshake AI),
-  FAFSA/financial-aid disbursements (`UNIVERSITY OF C STUDENT FE`), and
-  Depop/Grailed seller payouts. The task did not name this bucket, but these
+- **Income** — payroll from several part-time employers, FAFSA/financial-aid
+  disbursements from the university, and payouts from resale marketplaces.
+  The task did not name this bucket, but these
   rows are neither spending nor account-to-account transfers; mapping them to
   any BLS category would wrongly net spend down, and calling them "Transfer"
   would corrupt balance reconciliation. Deliberate addition — flagged here.
@@ -169,7 +172,7 @@ own card, identifiable structurally:
 - `DISCOVER E-PAYMENT` (the same payments seen from the Chase side),
 - `Online Transfer to/from CHK …0750` (own checking accounts, Chase Type
   ACCT_XFER),
-- `ACCTVERIFY` / `Yardi Penny Test` micro-deposits,
+- `ACCTVERIFY` / landlord-portal penny-test micro-deposits,
 - `ATM CASH DEPOSIT` (cash entering the account is funding, not income),
 - Discover cashback redemptions (`CASHBACK BONUS REDEMPTION`, `APPLE PAY
   STMT CRDT REDEMPTION`) — treated as non-spend rather than negative spend,
@@ -189,18 +192,19 @@ who isn't me.
 - Direction comes from the source sign, cross-checked against the Chase Type
   and the `to`/`from` wording; any conflict → direction `ambiguous`, row left
   Uncategorized. (Zero conflicts in this data.)
-- Default category **Miscellaneous**; the only seeded override is
-  `ZELLE EASTERN BAKERY INC → Food` (the counterparty names a bakery).
-  Further hand-tags belong in `peer.overrides` in `categories.yaml`.
+- Default category **Miscellaneous**; the one seeded override maps a peer
+  counterparty whose name is itself a bakery to Food — the rare case where the
+  counterparty string does reveal what was bought. Further hand-tags belong in
+  `peer.overrides` in the overlay.
 - **Venmo, Wise, and Apple Cash are treated as peer payments**, not
   transfers: money leaves the tracked accounts into P2P/stored-value rails
   whose spending never appears in these exports, so excluding them would
   undercount. This includes Apple Cash *top-ups* (outgoing) and Apple Cash →
   bank transfers (incoming, netting back). All land in `zelle_review.csv`.
 - All 266 peer rows are in `clean/zelle_review.csv`, sorted by |amount|.
-  **Warning worth reading:** incoming ($13,480.56) far exceeds outgoing
-  ($5,081.84), so the Miscellaneous bucket nets to **−$8,404.72** and shows
-  as negative in the category table. Large incoming Zelle (e.g. C.L.
+  **Warning worth reading:** incoming peer money far exceeds outgoing, so the
+  Miscellaneous bucket nets to a large negative and shows as negative in the
+  category table. Large incoming Zelle (e.g. C.L.
   $1–2k monthly, R.O.'s many repayments) may actually be rent-share or
   income-like flows rather than "repaying me for consumption" — hand-tagging
   the big rows in the review file matters more than any other refinement.
@@ -210,75 +214,82 @@ who isn't me.
 - **Laundromats** (WASH LAUNDRY, CSC ServiceWorks) → *Apparel and services*
   (BLS puts laundry/dry-cleaning there, not Housing).
 - **USPS / FedEx** → *Housing* (BLS: postage & stationery under housekeeping).
-- **Hotels** (Toggle Hotel Tokyo) → *Housing* (BLS: "other lodging").
-- **Cellular / eSIM** (Ubigi/Transatel) → *Housing* (BLS: telephone services
+- **Hotels** → *Housing* (BLS: "other lodging").
+- **Cellular / travel eSIM** → *Housing* (BLS: telephone services
   under utilities).
-- **Sports betting** (PrizePicks, Underdog incl. ViaTrustly deposits, Dabble)
-  → *Entertainment*, with payouts (the `REAL TIME PAYMENT … FROM:
-  PrizePicks/Underdog` credits) as negative Entertainment, so the category
+- **Sports betting** (three daily-fantasy apps, including deposits routed
+  through a payment processor) → *Entertainment*, with payouts (the
+  `REAL TIME PAYMENT … FROM:` credits) as negative Entertainment, so the
+  category
   nets to true gambling loss — matching BLS's net-loss treatment.
-- **Tuition refund** (`UC DAVIS TUITIONREF` +$2,418) → negative *Education*,
+- **Tuition refund** (a university `TUITIONREF` credit) → negative *Education*,
   offsetting the tuition charge it reverses (not Income).
 
 ## 8. Other merchant judgement calls
 
-- **Amazon** → Miscellaneous. No item detail exists; Discover files it under
-  Merchandise. Guessing Apparel vs household vs anything else seemed worse
-  than a documented Miscellaneous default.
-- **Target, Walmart, Costco** → Food. Discover itself categorises Target as
-  Supermarkets; these are grocery-dominant for this cardholder. Documented
-  assumption, easily re-ruled.
-- **7-Eleven** → Food everywhere, including the one row Discover calls
-  Gasoline (amounts there are snack-sized; merchant rules outrank the
-  Discover fallback).
-- **`tandem-ck-arf WEB PMTS`** → Housing: recurring −$800 monthly plus
-  utility-sized odd amounts; "ARF" matches Arlington Farm (Davis apartments),
-  corroborated by the Yardi penny test and Discover's `YSI*ARLINGTON FARM`
-  (YSI = Yardi payment portal), also mapped to Housing.
-- **Shimokitazawa/Setagaya square merchants** (FURUGIPOPUP, BIG TIME, NOILL,
-  AYNE, DYLAN SOUTH SIDE, USHIROMAE, ONE LEFT, AGEM) → Apparel and services:
-  "furugi" literally means used clothing, Big Time is a known vintage chain,
-  and the cluster (same ward, same trip, clothing-sized ¥ amounts) makes
-  vintage-shopping the coherent reading. This is the least certain block of
-  rules — it moves ≈$1.4k into Apparel.
+- **The large general-merchandise marketplace** → Miscellaneous. No item
+  detail exists; the card files it under Merchandise. Guessing Apparel vs
+  household vs anything else seemed worse than a documented default.
+- **Big-box retailers** (a discount chain, a supercenter, a warehouse club) →
+  Food. The card itself categorises one of them as Supermarkets; these are
+  grocery-dominant for this cardholder. Documented assumption, easily re-ruled.
+- **Convenience-store chains** → Food everywhere, including the one row the
+  card calls Gasoline (amounts there are snack-sized; merchant rules outrank
+  the card's own fallback).
+- **An opaque ACH rent string** → Housing: a recurring four-figure monthly
+  debit plus utility-sized odd amounts, whose abbreviation matches the
+  apartment complex, corroborated by the landlord portal's penny test and by
+  the same complex appearing through its payment portal on the other card.
+- **A cluster of eight small foreign card-reader merchants** → Apparel and
+  services: one name literally means "used clothing" in the local language,
+  another is a known vintage chain, and the cluster (same city district, same
+  trip, clothing-sized amounts in local currency) makes vintage-shopping the
+  coherent reading. This is the least certain block of rules — it moves ≈$1.4k
+  into Apparel.
 - **Discover miscategorisations corrected by rules**: UCD MU GAMES AREA
   (Education → Entertainment), MONARCH FUN ZONE (Medical Services →
   Entertainment), restaurants filed under Merchandise (Pho Oishii, Eggdrop,
   Tamagoken, Shinpachi, Present Coffee, Utts Cafe, Upper Crust, Pita Kabob →
   Food), UCD STORES MBS-MARKET (snacks → Food) vs MBS MAIN (bookstore →
   Education).
-- **Discover refunds inside "Payments and Credits"** (Depop, Target, Zara,
-  Uber Eats, Poppin, SP-brand returns) are matched by merchant rules *after*
+- **Card refunds filed under "Payments and Credits"** (marketplace, retail,
+  food-delivery and event-ticket returns) are matched by merchant rules *after*
   the two true card-payment patterns, so they net against their real
   category instead of vanishing into Transfer.
 - **ATM cash withdrawals** → Uncategorized (real spending, unknowable
   category — no guessing), while ATM cash *deposits* → Transfer. Asymmetric
   on purpose: withdrawn cash is presumed consumed, deposited cash is funding.
-- **Apple subscriptions** (`APPLE.COM/BILL`) → Entertainment (iCloud/app
-  subscriptions); **Spotify** → Entertainment; **ClickUp, Anthropic/Claude**
-  → Miscellaneous (software tools, not clearly Education).
+- **App-store subscriptions** (`…COM/BILL`) → Entertainment (cloud storage
+  and app subscriptions); **music streaming** → Entertainment; **project-
+  management and AI-assistant subscriptions** → Miscellaneous (software tools,
+  not clearly Education).
 - **Deliberately Uncategorized** (identifiable merchant, unknowable goods):
-  33MM Studio (largest at $805.50 + $235 − $155.77 refund), SQ *San Rafael,
-  TikTok Shop, Taobao, Mercari, eBay, AkiraCribs (PayPal), Glamstar (PayPal),
-  SS Ayase/Machiya (Tokyo, ¥24k — possibly capsule hotel/spa), Queen (Tokyo),
-  Victoria (Tokyo), the Tokyo malls (Hikarie, Tokyu Plaza, Coredo), Popcorn
-  Home Shopping, Raspberry Roach, Athens West, PBC Sacramento, Hugo's, LGB
-  Travel, MyPlots. These surface in the categorize.py top-20 report for
-  hand-tagging.
+  roughly twenty merchants get a rule that names them but assigns
+  Uncategorized rather than a guessed BLS category. They fall into a few
+  shapes: online resale and social-commerce marketplaces (where the
+  description names the platform, never the item); PayPal-routed sellers
+  whose descriptor is just a handle; foreign department stores and shopping
+  complexes; a studio whose largest charge is the single biggest
+  Uncategorized line, later partly refunded; and assorted local businesses
+  whose name says nothing about what was sold. Each is a deliberate refusal
+  to guess — they surface in the categorize.py top-20 report for hand-tagging,
+  and the rules themselves live in the overlay.
 - **Fees** (Chase FX adjustment fees, non-Chase ATM fees) → Miscellaneous.
-- **C.L. Zelles** (mom — rent support, 15 rows, $10.2k) → Income via
+- **C.L. Zelles** (mom — rent support, a five-figure annual total) → Income via
   `income_patterns`, so they're excluded from spend entirely instead of
   netting spend down through the peer Miscellaneous default. Side effect:
   income-path rows take the generic merchant, so BAC/JPM bank refs that the
   peer path would have stripped survive in the merchant column for these
   rows (cosmetic only; income is excluded from spend and dedupe is
   unaffected since the refs are stable across pulls).
-- **H.P. Zelle** ($120, 2025-01-02) → Transportation via
-  `peer.overrides` (Uber ride reimbursement).
+- **A one-off peer payment to H.P.** → Transportation via `peer.overrides`
+  (a ride-share reimbursement).
 - **Transaction overrides** (`transaction_overrides` in categories.yaml,
   matched after income, before peer detection): hand-tags for single rows
-  identified by exact (date, |amount|) — currently three Zelle rent payments
-  (L. $800 + $81, A. $325 → Housing). Amount matches on absolute
+  identified by exact (date, |amount|) — currently three peer rent payments
+  to two housemates, all Housing. The amounts and dates are real transaction
+  details, so the entries live in the gitignored overlay rather than here.
+  Amount matches on absolute
   value so the spend-positive yaml values work against Chase's negative raw
   amounts. The override forces only the *category*; peer rows keep their
   merchant/counterparty/direction, so dedupe keys in clean.py and
@@ -295,17 +306,18 @@ who isn't me.
   support to other households), and don't have my own insurance/pension
   payments. Noting this explicitly so it reads as a finding, not a missing
   category.
-- **Total spend vs. benchmark.** My annualized total spend ($17,958) is about
-  72% of the BLS benchmark average ($25,041) for the under-25, <$15k income
-  cohort. Two categories account for most of the divergence in the other
-  direction: Apparel and services (11.9% vs. 3.4%) and Education (24.8% vs.
-  21.6%), both consistent with being a student. I have not independently
+- **Total spend vs. benchmark.** My annualized total spend comes in below the
+  BLS benchmark average for the under-25, <$15k income cohort. Two categories
+  account for most of the divergence in the other direction — apparel and
+  education — both consistent with being a student. I have not independently
   verified whether the lower total reflects genuinely lower spending or
-  incomplete capture (e.g. cash transactions not passing through Chase/
-  Discover). Flagging as an open question rather than resolving it here.
-- **Uncategorized total.** $2,507 (7% of spend) remains Uncategorized,
-  consisting of deliberately-unknowable merchants (per the merchants: rules
-  in categories.yaml) plus untagged small peer-to-peer payments where the
+  incomplete capture (e.g. cash transactions not passing through either
+  account). Flagging as an open question rather than resolving it here.
+  (The tracked figures live in the generated `analysis.md`, which is built
+  from the synthetic sample; the real ones stay in `analysis.local.md`.)
+- **Uncategorized total.** A single-digit percentage of spend remains
+  Uncategorized, consisting of deliberately-unknowable merchants (per the
+  merchant rules) plus untagged small peer-to-peer payments where the
   transaction description gives no indication of what was purchased. This
   was a deliberate choice over guessing categories from amount alone, which
   would introduce false precision.

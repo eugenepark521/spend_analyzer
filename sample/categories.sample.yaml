@@ -29,6 +29,15 @@ peer:
     - match: 'ZIPLANE'
       category: Transportation
 
+# The sample's own geography, stripped from unmatched merchant names the same
+# way the tracked two-letter state codes are (see categories.yaml).
+location_tokens:
+  - OR
+  - PORTLAND
+  - BEAVERTON
+  - HILLSBORO
+  - STOCKPORT
+
 merchants:
   # --- housing: rent, dorm, utilities, phone ---
   - {match: 'BRIAR CREEK APTS', merchant: BRIAR CREEK APARTMENTS, category: Housing}

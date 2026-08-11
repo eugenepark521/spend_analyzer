@@ -2,6 +2,22 @@
 # Consumed by normalize.py (shared by clean.py and categorize.py).
 # Edit rules here; no code changes needed.
 #
+# WHAT LIVES WHERE
+#   categories.yaml            (tracked)   schema, category lists, generic
+#                                          bank-plumbing patterns, and a few
+#                                          example merchant rules.
+#   categories.local.yaml      (gitignored) the real personal rule set —
+#                                          merchants, employers, counterparties,
+#                                          hand-tagged rows, home geography.
+#   sample/categories.sample.yaml          the synthetic demo rule set, loaded
+#                                          instead of the local one when
+#                                          SPEND_CATEGORIES_LOCAL points at it.
+# normalize.Resolver merges an overlay by APPENDING its list sections after the
+# tracked ones, so tracked rules always match first and the merged order is
+# stable. Without any overlay the pipeline still runs end to end; rows that
+# only a personal rule would have matched fall through to Uncategorized
+# (or to the peer/Discover fallbacks) rather than crashing.
+#
 # Matching precedence (implemented in normalize.py):
 #   1. transfer_patterns        -> Transfer  (excluded from spend)
 #   2. income_patterns          -> Income    (excluded from spend)
@@ -39,45 +55,38 @@ admin_categories:
 # ---------------------------------------------------------------------------
 # 1. Transfers: NOT spending; would double-count card purchases or are pure
 #    account plumbing. Kept in output for reconciliation, excluded from totals.
+#    These are bank-generated strings, not merchant identities.
 transfer_patterns:
-  - 'INTERNET PAYMENT - THANK YOU'      # Discover card payment from checking
+  - 'INTERNET PAYMENT - THANK YOU'      # card payment from checking
   - 'RETURNED INTERNET PMT'             # ...and its bounce reversal
-  - '^ONLINE TRANSFER (TO|FROM) CHK'    # between my own Chase accounts
-  - '^DISCOVER\s+E-PAYMENT'             # paying the Discover card from Chase
-  - 'ACCTVERIFY'                        # Gusto/payroll penny verifications
-  - 'PENNY TEST'                        # Yardi penny test
+  - '^ONLINE TRANSFER (TO|FROM) CHK'    # between my own accounts
+  - '^DISCOVER\s+E-PAYMENT'             # paying the card from checking
+  - 'ACCTVERIFY'                        # payroll-provider penny verification
+  - 'PENNY TEST'                        # landlord portal penny test
   - '^ATM CASH DEPOSIT'                 # cash entering the account, not income
-  - 'STMT CRDT REDEMPTION'              # Discover cashback redeemed as credit
+  - 'STMT CRDT REDEMPTION'              # card cashback redeemed as credit
   - '^CASHBACK BONUS REDEMPTION'
 
 # 2. Income: money earned/received, not consumption. Excluded from spend.
+#    Employer, university and marketplace names identify me, so those patterns
+#    live in the overlay; only the generic payroll match is tracked.
 income_patterns:
-  - 'PAYROLL'                           # Naya Dessert Cafe, Target Corporate
-  - 'CHIPGRIL\s+PAYMENTS'               # ChipGril pay (PPD credits)
-  - 'HANDSHAKE'                         # Handshake AI gig payouts (Stripe)
-  - '^UNIVERSITY OF C\s+STUDENT FE'     # FAFSA/financial-aid disbursements
-  - '^DEPOP\s+DEPOP'                    # Depop seller payout (ACH, not a purchase)
-  # Grailed seller payout only (ACH: strips to exactly this after junk removal).
-  # Card PURCHASES strip to 'WWW.GRAILED.COM WWW.GRAILED.C CA' — the $ anchor
-  # keeps them out of Income so the GRAILED merchant rule tags them Apparel.
-  - '^WWW\.GRAILED\.COM\s+WWW\.GRAILE$'
-  # (family-support Zelle pattern lives in categories.local.yaml — it names a
-  # real person; see the overlay note at the top of that file)
+  - 'PAYROLL'                           # any employer's payroll ACH credit
 
 # 3. Transaction overrides: hand-tags for single rows whose description can
-#    never reveal the category (rent paid by Zelle). `date` is the normalised
-#    YYYY-MM-DD transaction date; `amount` is matched on absolute value, so
-#    it works regardless of source sign convention. A matching row takes the
-#    given category directly, skipping peer default_category and merchant
-#    rules; peer rows keep their merchant/counterparty and still appear in
-#    zelle_review.csv.
-#    All current entries are real transaction details of personal payments,
-#    so they live in categories.local.yaml (untracked), merged at load.
+#    never reveal the category (e.g. rent paid peer-to-peer). `date` is the
+#    normalised YYYY-MM-DD transaction date; `amount` is matched on absolute
+#    value, so it works regardless of source sign convention. A matching row
+#    takes the given category directly, skipping peer default_category and
+#    merchant rules; peer rows keep their merchant/counterparty and still
+#    appear in zelle_review.csv.
+#    Every real entry is a personal transaction detail, so they live in the
+#    overlay; categorize.py asserts each one matches exactly one row.
 transaction_overrides: []
 
 # 4. Peer payments (Zelle / QuickPay / Venmo / Apple Cash / Wise).
 #    These ARE spending (reimbursements for real consumption). Direction from
-#    the Chase Type + sign; every peer row is also written to zelle_review.csv.
+#    the source Type + sign; every peer row is also written to zelle_review.csv.
 peer:
   chase_types_outgoing: [QUICKPAY_DEBIT, CHASE_TO_PARTNERFI]
   chase_types_incoming: [QUICKPAY_CREDIT, PARTNERFI_TO_CHASE]
@@ -86,228 +95,54 @@ peer:
     - '^WISE US INC'
     - '^APPLE CASH'
   default_category: Miscellaneous       # description almost never says what was bought
-  overrides:                            # hand-tagged peer counterparties -> true category
-    # (person-name overrides live in categories.local.yaml, appended after these)
-    - match: 'EASTERN BAKERY'
-      category: Food
+  overrides: []                         # named counterparties -> overlay
+
+# Location tokens (not part of the matching precedence): trailing place names
+#    stripped from the generic merchant
+#    fallback (rule-matched merchants never reach it). Only two-letter state
+#    codes are tracked — the city, ward and country tokens in my own data say
+#    where I live and travel, so they live in the overlay. Missing tokens are
+#    cosmetic only: an unmatched merchant keeps its trailing place name.
+location_tokens:
+  - CA
+  - CO
+  - DE
+  - FL
+  - GA
+  - IL
+  - KS
+  - MD
+  - MN
+  - NJ
+  - NV
+  - NY
+  - OH
+  - PA
+  - TN
+  - TX
+  - WA
 
 # 5. Merchant rules. First match wins. `merchant` is the canonical name used
 #    for dedupe and the collapse report; `category` must be a BLS category,
 #    or Uncategorized for identifiable-but-unknowable merchants.
+#    The real rule set is in the overlay. What stays here is the fee/cash block
+#    (bank-generated strings that name no business) plus clearly fictional
+#    examples showing the three shapes a rule takes: a plain substring, an
+#    alternation across spellings, and a deliberate Uncategorized tag.
 merchants:
   # --- fees / cash ---
   - {match: 'FOREIGN EXCHANGE RATE ADJUSTMENT FEE', merchant: CHASE FX FEE, category: Miscellaneous}
   - {match: 'NON-CHASE ATM FEE', merchant: ATM FEE, category: Miscellaneous}
   - {match: '(^|NON-CHASE )ATM WITHDRAW', merchant: ATM WITHDRAWAL, category: Uncategorized}  # cash spend, unattributable
 
-  # --- housing: rent, utilities, lodging, phone/internet, postage ---
-  - {match: '^TANDEM-CK-ARF', merchant: TANDEM (ARLINGTON FARM RENT), category: Housing}
-  - {match: 'ARLINGTON FARM', merchant: ARLINGTON FARM (YARDI), category: Housing}
-  - {match: 'TOGGLE HOTEL', merchant: TOGGLE HOTEL, category: Housing}       # BLS: other lodging
-  - {match: 'TRANSATEL|UBIGI', merchant: UBIGI ESIM, category: Housing}      # BLS: telephone services
-  - {match: '^USPS\b', merchant: USPS, category: Housing}                    # BLS: postage & stationery
-  - {match: 'FEDEX', merchant: FEDEX, category: Housing}                     # BLS: postage & stationery
+  # --- illustrative examples (fictional; they match no real description) ---
+  - {match: 'EXAMPLE GROCERY CO', merchant: EXAMPLE GROCERY, category: Food}
+  - {match: 'EXAMPLE COFFEE|EXAMPLECOFFEE|SQ \*EXAMPLE COFFEE', merchant: EXAMPLE COFFEE, category: Food}
+  - {match: 'EXAMPLE TRANSIT AUTH', merchant: EXAMPLE TRANSIT, category: Transportation}
+  # identifiable merchant, unknowable goods -> counted as spend, not guessed
+  - {match: 'EXAMPLE MARKETPLACE', merchant: EXAMPLE MARKETPLACE, category: Uncategorized}
 
-  # --- food: groceries & supermarkets ---
-  - {match: 'TRADER JOE', merchant: TRADER JOES, category: Food}
-  - {match: 'COSTCO', merchant: COSTCO, category: Food}
-  - {match: '^TARGET\b|TARGET\.COM', merchant: TARGET, category: Food}
-  - {match: 'WAL-?MART', merchant: WALMART, category: Food}
-  - {match: '^VONS\b', merchant: VONS, category: Food}
-  - {match: 'SPROUTS FARMERS', merchant: SPROUTS, category: Food}
-  - {match: 'SAFEWAY', merchant: SAFEWAY, category: Food}
-  - {match: 'SMART AND FINAL', merchant: SMART AND FINAL, category: Food}
-  - {match: 'H MART', merchant: H MART, category: Food}
-  - {match: 'HO HO MARKET', merchant: HO HO MARKET, category: Food}
-  - {match: 'KOBE MINI MART', merchant: KOBE MINI MART, category: Food}
-  - {match: 'FAMILY MART', merchant: FAMILY MART, category: Food}
-  - {match: 'SEVEN ELEVEN|7-ELEVEN', merchant: 7-ELEVEN, category: Food}
-  - {match: 'MYBASKET', merchant: MYBASKET, category: Food}
-  - {match: 'UCD TERCERO MARKET', merchant: UCD TERCERO MARKET, category: Food}
-  - {match: 'UCD STORES MBS-MARKET', merchant: UCD MBS MARKET, category: Food}
-  - {match: 'HOLOS COFFEE', merchant: HOLOS COFFEE, category: Food}
-  - {match: 'COCA COLA', merchant: COCA-COLA VENDING, category: Food}
-  - {match: 'VENDING MACHINE', merchant: VENDING MACHINE, category: Food}
-  - {match: 'ITSUGAR', merchant: ITSUGAR, category: Food}
-
-  # --- food: restaurants / cafes / delivery (Chase rows have no category;
-  #     several Discover rows are mis-filed under Merchandise) ---
-  - {match: 'UBER\s+\*?EATS|UBER\s+\*ONE', merchant: UBER EATS, category: Food}
-  - {match: 'DOORDASH', merchant: DOORDASH, category: Food}
-  - {match: 'IN-N-OUT', merchant: IN-N-OUT BURGER, category: Food}
-  - {match: 'CHIPOTLE', merchant: CHIPOTLE, category: Food}
-  - {match: 'CHICK-FIL-A', merchant: CHICK-FIL-A, category: Food}
-  - {match: 'BLAZE PIZZA', merchant: BLAZE PIZZA, category: Food}
-  - {match: 'INSOMNIA COOKIES', merchant: INSOMNIA COOKIES, category: Food}
-  - {match: 'GRAMS BBQ', merchant: GRAMS BBQ, category: Food}
-  - {match: 'COLDSTONE', merchant: COLD STONE CREAMERY, category: Food}
-  - {match: 'DAVIS CREAMERY', merchant: DAVIS CREAMERY, category: Food}
-  - {match: 'CREPEVILLE', merchant: CREPEVILLE, category: Food}
-  - {match: 'HUCKLEBERRY', merchant: HUCKLEBERRYS, category: Food}
-  - {match: 'KABAB GRILL', merchant: KABAB GRILL, category: Food}
-  - {match: 'KOPAN RAMEN', merchant: KOPAN RAMEN, category: Food}
-  - {match: 'SIT LO SAIGON', merchant: SIT LO SAIGON, category: Food}
-  - {match: 'BAKE & CHE', merchant: BAKE AND CHE, category: Food}
-  - {match: 'INI RISTORANTE', merchant: INI RISTORANTE, category: Food}
-  - {match: 'DA VIEN COFFEE', merchant: DA VIEN COFFEE, category: Food}
-  - {match: 'GOOD FRIENDS? POKE', merchant: GOOD FRIENDS POKE, category: Food}
-  - {match: 'SPA FOOD HOUSE', merchant: SPA FOOD HOUSE, category: Food}
-  - {match: 'ZEN TORO', merchant: ZEN TORO, category: Food}
-  - {match: 'BESTEA', merchant: BESTEA, category: Food}
-  - {match: 'TISANE TBAR', merchant: TISANE TEA BAR, category: Food}
-  - {match: 'MARUWU SEICHA', merchant: MARUWU SEICHA, category: Food}
-  - {match: 'REMICONE', merchant: REMICONE, category: Food}
-  - {match: 'LITTLE TOKYO ICE CREAM', merchant: LITTLE TOKYO ICE CREAM, category: Food}
-  - {match: 'TACOS EL JEFE', merchant: TACOS EL JEFE, category: Food}
-  - {match: 'MUNCHO', merchant: MUNCHO (RESTAURANT APP), category: Food}
-  - {match: 'PITA KABOB', merchant: PITA KABOB, category: Food}
-  - {match: 'UPPER CRUST BAKING', merchant: UPPER CRUST BAKING, category: Food}
-  - {match: 'PHOOISHII', merchant: PHO OISHII, category: Food}
-  - {match: 'EGGDROP', merchant: EGGDROP, category: Food}
-  - {match: 'TAMAGOKENN', merchant: TAMAGOKEN, category: Food}
-  - {match: 'SHINPACHI SHOKUDO', merchant: SHINPACHI SHOKUDO, category: Food}
-  - {match: 'PRESENT COFFEE', merchant: PRESENT COFFEE, category: Food}
-  - {match: 'UTTS CAFE', merchant: UTTS CAFE, category: Food}
-  - {match: 'ASUCD COFFEE HOUSE|UCD COFFEE', merchant: UCD COFFEE HOUSE, category: Food}
-  - {match: '^LAWSON\b', merchant: LAWSON, category: Food}
-  - {match: 'BIGAOHANA', merchant: BIGAOHANA JAYA, category: Food}
-  - {match: 'LITTLE GEM BEL', merchant: LITTLE GEM, category: Food}
-  - {match: 'MABEL S MARKET', merchant: MABELS MARKET, category: Food}
-
-  # --- alcohol / tobacco ---
-  - {match: 'SEAL BEACH LIQUOR', merchant: SEAL BEACH LIQUOR, category: Alcoholic beverages}
-  - {match: 'AUBURN FOOD AND LIQUOR', merchant: AUBURN FOOD AND LIQUOR, category: Alcoholic beverages}
-  - {match: 'TOBACC', merchant: HAIGHT STREET TOBACCO, category: Tobacco products and smoking supplies}
-  - {match: 'SMOKE SHOP', merchant: RODEO SMOKE SHOP, category: Tobacco products and smoking supplies}
-
-  # --- apparel and services (incl. laundromats per BLS definition) ---
-  - {match: 'WASH LAUNDRY', merchant: WASH LAUNDRY, category: Apparel and services}
-  - {match: 'CSC SERVICEWORKS|CSCSW', merchant: CSC SERVICEWORKS LAUNDRY, category: Apparel and services}
-  - {match: 'GRAILED', merchant: GRAILED, category: Apparel and services}
-  - {match: '^DEPOP\b', merchant: DEPOP, category: Apparel and services}
-  - {match: 'STOCKX', merchant: STOCKX, category: Apparel and services}
-  - {match: 'ZARA', merchant: ZARA, category: Apparel and services}
-  - {match: 'PULLANDBEAR', merchant: PULL AND BEAR, category: Apparel and services}
-  - {match: 'AEROPOSTALE', merchant: AEROPOSTALE, category: Apparel and services}
-  - {match: 'GAP OUTLET', merchant: GAP, category: Apparel and services}
-  - {match: 'OLDNAVY', merchant: OLD NAVY, category: Apparel and services}
-  - {match: 'LEVI\.COM', merchant: LEVIS, category: Apparel and services}
-  - {match: 'ALO-YOGA', merchant: ALO YOGA, category: Apparel and services}
-  - {match: 'TILLYS', merchant: TILLYS, category: Apparel and services}
-  - {match: 'NORDSTROM RACK', merchant: NORDSTROM RACK, category: Apparel and services}
-  - {match: 'MARSHALLS', merchant: MARSHALLS, category: Apparel and services}
-  - {match: 'SUPREME', merchant: SUPREME, category: Apparel and services}
-  - {match: 'ARCTERYX', merchant: ARCTERYX, category: Apparel and services}
-  - {match: 'ONITSUKATIGER', merchant: ONITSUKA TIGER, category: Apparel and services}
-  - {match: 'VAGUE STREETWEAR', merchant: VAGUE STREETWEAR, category: Apparel and services}
-  - {match: 'V2BYVELARE', merchant: V2 BY VELARE, category: Apparel and services}
-  - {match: 'COLE IVY', merchant: COLE IVY, category: Apparel and services}
-  - {match: 'NON-FOYA', merchant: NON-FOYA, category: Apparel and services}
-  - {match: '\bPINUP\b', merchant: PINUP, category: Apparel and services}
-  - {match: 'YESTERDAY DAVIS', merchant: YESTERDAY VINTAGE, category: Apparel and services}
-  # Shimokitazawa/Setagaya vintage-clothing cluster (June–July Japan trip)
-  - {match: 'FURUGIPOPUP', merchant: FURUGI POPUP (VINTAGE), category: Apparel and services}
-  - {match: 'BIG TIME SHIMOKITAZAWA', merchant: BIG TIME VINTAGE, category: Apparel and services}
-  - {match: '\bNOILL\b', merchant: NOILL (VINTAGE), category: Apparel and services}
-  - {match: '\bAYNE\b', merchant: AYNE (VINTAGE), category: Apparel and services}
-  - {match: 'DYLAN SOUTH SIDE', merchant: DYLAN SOUTH SIDE (VINTAGE), category: Apparel and services}
-  - {match: 'USHIROMAE', merchant: USHIROMAE (VINTAGE), category: Apparel and services}
-  - {match: 'ONE LEFT KK', merchant: ONE LEFT (VINTAGE), category: Apparel and services}
-  - {match: 'AGEM SHIMOKITAZAWA', merchant: AGEM (VINTAGE), category: Apparel and services}
-
-  # --- transportation ---
-  - {match: 'MOBILE SUICA', merchant: MOBILE SUICA (JR TRANSIT), category: Transportation}
-  - {match: 'UBER.*(TRIP|TECHNOLOGIES)|^UBER TRIP', merchant: UBER RIDES, category: Transportation}
-  - {match: 'PENDING\.BIRD\.CO|^SPIN\b', merchant: SPIN/BIRD SCOOTERS, category: Transportation}
-  - {match: 'CHEVRON', merchant: CHEVRON, category: Transportation}
-  - {match: 'ARCO#?\d*', merchant: ARCO, category: Transportation}
-  - {match: '^76 - ', merchant: 76 GAS, category: Transportation}
-  - {match: 'CIRCLE K', merchant: CIRCLE K, category: Transportation}
-  - {match: 'ECO GAS', merchant: ECO GAS AND MART, category: Transportation}
-  - {match: 'HQ FUELS', merchant: HQ FUELS, category: Transportation}
-  - {match: 'FAST 5', merchant: FAST5XPRESS CAR WASH, category: Transportation}
-
-  # --- healthcare / personal care ---
-  - {match: 'SUPER EYEBROW', merchant: SUPER EYEBROW, category: Personal care products and services}
-  - {match: 'ULTA', merchant: ULTA, category: Personal care products and services}
-  - {match: 'OLIVE YOUNG', merchant: CJ OLIVE YOUNG, category: Personal care products and services}
-  - {match: 'SKIN1004', merchant: SKIN1004, category: Personal care products and services}
-  - {match: 'MATSUMOTOKIYOSHI', merchant: MATSUMOTO KIYOSHI, category: Personal care products and services}
-  - {match: 'GUERLAIN', merchant: GUERLAIN, category: Personal care products and services}
-  - {match: 'LUXURY PERFUMES', merchant: LUXURY PERFUMES, category: Personal care products and services}
-  - {match: 'PARFUM FRANC', merchant: FRANCIS KURKDJIAN, category: Personal care products and services}
-
-  # --- reading / education ---
-  - {match: 'BARNES & NOBLE', merchant: BARNES AND NOBLE, category: Reading}
-  - {match: 'UC DAVIS\s+TUITION(FEE|REF)', merchant: UC DAVIS TUITION, category: Education}  # REF rows are negative -> net down
-  - {match: 'UNIVERSITY OF C\s+PURCHASE', merchant: UC DAVIS FEES, category: Education}
-  - {match: 'UCD STORES MBS MAIN', merchant: UCD BOOKSTORE, category: Education}
-  - {match: 'UCD STUDY ABROAD', merchant: UCD STUDY ABROAD, category: Education}
-
-  # --- entertainment (incl. sports betting: deposits positive, payouts negative,
-  #     so the category nets to my true gambling loss, matching BLS treatment) ---
-  - {match: 'UCD MU GAMES AREA', merchant: UCD GAMES AREA, category: Entertainment}  # Discover mis-files as Education
-  - {match: 'MONARCH FUN ZONE', merchant: MONARCH FUN ZONE, category: Entertainment} # Discover mis-files as Medical
-  - {match: 'PRIZEPICKS', merchant: PRIZEPICKS, category: Entertainment}
-  - {match: 'UNDERDOG', merchant: UNDERDOG SPORTS, category: Entertainment}
-  - {match: 'DABBLE', merchant: DABBLE FANTASY, category: Entertainment}
-  - {match: 'KNOTT', merchant: KNOTTS BERRY FARM, category: Entertainment}
-  - {match: 'TOKYO DISNEY', merchant: TOKYO DISNEY RESORT, category: Entertainment}
-  - {match: 'VISALIA ADVENTURE PARK', merchant: VISALIA ADVENTURE PARK, category: Entertainment}
-  - {match: 'BIG BEAR MTN', merchant: BIG BEAR MOUNTAIN RESORT, category: Entertainment}
-  - {match: 'HAMA RIKYU', merchant: HAMA RIKYU GARDENS, category: Entertainment}
-  - {match: 'KLOOK', merchant: KLOOK, category: Entertainment}
-  - {match: '^AMC\b', merchant: AMC THEATRES, category: Entertainment}
-  - {match: 'REGAL CINEMAS|^REG GARDEN GROVE|DAVIS HOLIDAY 6', merchant: REGAL CINEMAS, category: Entertainment}
-  - {match: 'WEST GROVE CINEMAS|STARLIGHT WEST GROVE', merchant: WEST GROVE CINEMAS, category: Entertainment}
-  - {match: 'DAVIS VARSITY THEA', merchant: DAVIS VARSITY THEATRE, category: Entertainment}
-  - {match: 'FANDANGO', merchant: FANDANGO, category: Entertainment}
-  - {match: 'VEGAS BILLIARD', merchant: VEGAS BILLIARD, category: Entertainment}
-  - {match: 'KIDDLETON|NATIONAL ENTERTAI', merchant: CLAW MACHINE ARCADE, category: Entertainment}
-  - {match: "FAN FAN'S GLOBAL", merchant: FAN FANS (ARCADE), category: Entertainment}
-  - {match: '\bLEGO\b', merchant: LEGO, category: Entertainment}
-  - {match: 'NINTENDO', merchant: NINTENDO, category: Entertainment}
-  - {match: 'ONLYFANS', merchant: ONLYFANS, category: Entertainment}
-  - {match: 'SPOTIFY', merchant: SPOTIFY, category: Entertainment}
-  - {match: 'APPLE\.COM/BILL', merchant: APPLE SERVICES, category: Entertainment}
-  - {match: 'POPPIN\*?', merchant: POPPIN (EVENT TICKETS), category: Entertainment}
-
-  # --- miscellaneous (software, one-off services) ---
-  - {match: 'CLICKUP', merchant: CLICKUP, category: Miscellaneous}
-  - {match: 'ANTHROPIC|CLAUDE\.AI', merchant: ANTHROPIC CLAUDE, category: Miscellaneous}
-  - {match: 'CHARGESPOT', merchant: CHARGESPOT, category: Miscellaneous}
-  - {match: 'DOLLAR TREE', merchant: DOLLAR TREE, category: Miscellaneous}
-  - {match: 'DAISO', merchant: DAISO, category: Miscellaneous}
-  - {match: 'DON QUIXOTE', merchant: DON QUIJOTE, category: Miscellaneous}
-  - {match: 'AMAZON|AMZN', merchant: AMAZON, category: Miscellaneous}  # no item detail; Discover files under Merchandise
-  - {match: 'ETSY', merchant: ETSY, category: Miscellaneous}
-
-  # --- identifiable but unknowable: deliberate Uncategorized (add rules as
-  #     these get hand-tagged; they surface in the uncategorized report) ---
-  - {match: 'AKIRACRIBS', merchant: AKIRACRIBS (PAYPAL), category: Uncategorized}
-  - {match: 'GLAMSTAR', merchant: GLAMSTAR (PAYPAL), category: Uncategorized}
-  - {match: 'MYPLOTS', merchant: MYPLOTS, category: Uncategorized}
-  - {match: 'ATHENS WEST', merchant: ATHENS WEST, category: Uncategorized}
-  - {match: '^PBC-', merchant: PBC SACRAMENTO, category: Uncategorized}
-  - {match: 'TAOBAO', merchant: TAOBAO, category: Uncategorized}
-  - {match: 'TIKTOK SHOP', merchant: TIKTOK SHOP, category: Uncategorized}
-  - {match: 'MERCARI', merchant: MERCARI, category: Uncategorized}
-  - {match: '^EBAY|EBAY O\*', merchant: EBAY, category: Uncategorized}
-  - {match: '33MMSTUDIO', merchant: 33MM STUDIO, category: Uncategorized}
-  - {match: 'POPCORN HOME SHOPPIN', merchant: POPCORN HOME SHOPPING, category: Uncategorized}
-  - {match: 'RASPBERRY ROACH', merchant: RASPBERRY ROACH, category: Uncategorized}
-  - {match: 'LGB TRAVEL', merchant: LGB TRAVEL AT EASE, category: Uncategorized}
-  - {match: "HUGO'S BUSINESS", merchant: HUGOS, category: Uncategorized}
-  - {match: 'SQ \*SAN RAFAEL', merchant: SAN RAFAEL (SQUARE), category: Uncategorized}
-  - {match: '^QUEEN\b|QUEEN SB', merchant: QUEEN (TOKYO), category: Uncategorized}
-  - {match: '^VICTORIA TOKYO', merchant: VICTORIA (TOKYO), category: Uncategorized}
-  - {match: '^SS (AYASE|MACHIYA)', merchant: SS (TOKYO), category: Uncategorized}
-  - {match: 'SHIBUYAHIKARIE', merchant: SHIBUYA HIKARIE (MALL), category: Uncategorized}
-  - {match: 'TOKYUPLAZA', merchant: TOKYU PLAZA (MALL), category: Uncategorized}
-  - {match: 'COREDOMUROMACHI', merchant: COREDO MUROMACHI (MALL), category: Uncategorized}
-  - {match: '\bYGYG\b', merchant: YGYG (TOKYO), category: Uncategorized}
-
-# 6. Fallback for Discover-assigned categories that are trustworthy enough to
+# 6. Fallback for card-assigned categories that are trustworthy enough to
 #    map 1:1 when no merchant rule fired. Merchandise / Services / Department
 #    Stores are deliberately ABSENT: too coarse, per-merchant rules only
 #    (per sources.md), so their unmatched remainder lands in Uncategorized.

@@ -4,6 +4,11 @@ raw/
 *.csv
 categories.local.yaml
 
+# *.local.* is the convention for "real data, mine only": the personal rule
+# overlay above and the analysis rendered from real numbers. The tracked
+# analysis.md is rendered from the synthetic sample by build_sample.py.
+*.local.md
+
 # sample/ is the TRACKED synthetic demo dataset (see build_sample.py) — the
 # *.csv rule above would otherwise swallow it. These four filenames are
 # whitelisted EXACTLY, not by glob: sample/ doubles as the sample run's

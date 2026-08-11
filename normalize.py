@@ -34,7 +34,7 @@ _JUNK = [
     re.compile(r"CLAIMID:?\s*\S*", re.I),
     re.compile(r"TRANSACTION#:\s*\S+", re.I),
     re.compile(r"\bST-[A-Z0-9]{8,}\b", re.I),                       # Stripe payout refs
-    re.compile(r"\b\d{2}/\d{2}[A-Z]*\b"),                           # trailing dates, incl. glued "06/26KATSUSHIK"
+    re.compile(r"\b\d{2}/\d{2}[A-Z]*\b"),                           # trailing dates, incl. ones glued to a following place name
     re.compile(r"\b\d{3}-\d{3}-\d{4}\b"),                           # phone numbers
     re.compile(r"\b\d{3}-\d{7}\b"),
     re.compile(r"\b\d{5,}[A-Z]{0,2}\b"),                            # store/register/reference digit runs
@@ -47,25 +47,9 @@ _PREFIXES = re.compile(
 )
 
 # Trailing location tokens for the generic fallback (rule-matched merchants
-# never reach this). US states seen in the data + country/ward tokens.
-_LOC_TOKENS = {
-    "CA", "NY", "TX", "TN", "WA", "PA", "GA", "KS", "NV", "NJ", "IL", "FL",
-    "MD", "OH", "MN", "DE", "BC", "CO", "JPN", "KOR", "FRA",
-    "GARDEN", "GROVE", "SEAL", "BEACH", "DAVIS", "IRVINE", "WESTMINSTER",
-    "SACRAMENTO", "SAN", "FRANCISCO", "FRANCISCOCA", "LOS", "ANGELES",
-    "HUNTINGTON", "HUNTINGTN", "BCH", "BCHCA", "BE", "BECA", "BUENA", "PARK",
-    "STANTON", "CYPRESS", "WOODLAND", "VACAVILLE", "FULLERTON", "COSTA",
-    "MESA", "SANTA", "ANA", "FE", "SPRNCA", "VISALIA", "LEBEC", "CASTROVILLE",
-    "MILL", "VALLEY", "AUBURN", "STOCKTON", "BERKELEY", "ARTESIA",
-    "VICTORVILLE", "SEGUNDO", "EL", "LONG", "PLAINVIEW", "WILMINGTON", "NEW",
-    "YORK", "CITY", "CITYNY", "GROVEPORT", "COLUMBUS", "ADDISON", "AUSTIN",
-    "ATLANTA", "STOCKPORT", "COURBEVOIE", "TOKYO", "SEOUL", "VANCOUV", "NORTH",
-    "SHIBUYA-KU", "SHINJUKU-KU", "SETAGAYA-KU", "MINATO-KU", "CHIYODA-KU",
-    "CHUO-KU", "KATSUSHIKA-KU", "KATSUSHIKA-KUJPN", "ARAKAWA-KU", "ADACHI-KU",
-    "URAYASU-SHI", "SUITA-SHI", "MUSASHINO-SHI", "MUSASHINO-SHIJPN",
-    "FUJIYOSHIDA-SJPN", "MIHAMA-KU", "CHIJPN", "HIGASHIHIROSHJPN",
-    "SHIMOKITAZAWA", "KABUKICHO", "OMOTESANDO", "AOYAMA",
-}
+# never reach this) come from categories.yaml `location_tokens`, merged with any
+# overlay — the tracked file carries only two-letter state codes, since the
+# city and ward names in real data say where someone lives and travels.
 
 _ZELLE = re.compile(r"ZELLE PAYMENT (TO|FROM)\s+(.*)", re.I)
 
@@ -79,12 +63,12 @@ def strip_junk(desc: str) -> str:
     return s.upper()
 
 
-def generic_merchant(cleaned: str) -> str:
+def generic_merchant(cleaned: str, loc_tokens: frozenset[str] = frozenset()) -> str:
     """Fallback canonical merchant for rows no rule matched: strip processor
     prefixes, trailing city/state tokens, stray punctuation."""
     s = _PREFIXES.sub("", cleaned).strip()
     tokens = s.split()
-    while len(tokens) > 1 and tokens[-1].strip(".,#*") in _LOC_TOKENS:
+    while len(tokens) > 1 and tokens[-1].strip(".,#*") in loc_tokens:
         tokens.pop()
     s = " ".join(tokens)
     s = re.sub(r"[#*]+\w*$", "", s).strip(" .,*#-")
@@ -129,7 +113,7 @@ class Resolver:
         if local_path.exists():
             local = yaml.safe_load(local_path.read_text()) or {}
             for key in ("transfer_patterns", "income_patterns",
-                        "transaction_overrides", "merchants"):
+                        "transaction_overrides", "merchants", "location_tokens"):
                 if key in local:
                     raw[key] = list(raw.get(key, [])) + list(local[key])
             if "peer" in local:
@@ -158,6 +142,9 @@ class Resolver:
             for m in raw["merchants"]
         ]
         self.discover_fallback = dict(raw["discover_fallback"])
+        # A set, so tracked + overlay order is irrelevant; absent tokens only
+        # leave a trailing place name on unmatched merchants.
+        self.loc_tokens = frozenset(raw.get("location_tokens") or ())
         # Every category a rule can assign must be a known BLS/admin category.
         valid = set(self.bls) | set(self.admin)
         for _, m, c in self.merchants:
@@ -194,7 +181,7 @@ class Resolver:
             counterparty = "WISE"
             desc_dir = ""
         else:
-            counterparty, desc_dir = generic_merchant(cleaned), ""
+            counterparty, desc_dir = generic_merchant(cleaned, self.loc_tokens), ""
 
         # Direction: source sign is authoritative, per that source's own
         # convention (Chase raw: negative = money out; Discover raw: positive =
@@ -251,15 +238,15 @@ class Resolver:
 
         for pat in self.transfer:
             if pat.search(cleaned):
-                return Resolution(generic_merchant(cleaned), "Transfer",
+                return Resolution(generic_merchant(cleaned, self.loc_tokens), "Transfer",
                                   matched_rule="transfer")
         if source == "chase" and source_type == "ACCT_XFER":
-            return Resolution(generic_merchant(cleaned), "Transfer",
+            return Resolution(generic_merchant(cleaned, self.loc_tokens), "Transfer",
                               matched_rule="transfer")
 
         for pat in self.income:
             if pat.search(cleaned):
-                return Resolution(generic_merchant(cleaned), "Income",
+                return Resolution(generic_merchant(cleaned, self.loc_tokens), "Income",
                                   matched_rule="income")
 
         is_peer_row = (source == "chase" and source_type in (self.peer_out | self.peer_in)) or \
@@ -275,7 +262,7 @@ class Resolver:
                                              source_type, raw_amount)
                     res.category = o_cat
                 else:
-                    res = Resolution(generic_merchant(cleaned), o_cat)
+                    res = Resolution(generic_merchant(cleaned, self.loc_tokens), o_cat)
                 res.matched_rule = "transaction_override"
                 return res
 
@@ -288,9 +275,9 @@ class Resolver:
                 return Resolution(merchant, category, matched_rule="merchant")
 
         if source == "discover" and source_type in self.discover_fallback:
-            return Resolution(generic_merchant(cleaned),
+            return Resolution(generic_merchant(cleaned, self.loc_tokens),
                               self.discover_fallback[source_type],
                               matched_rule="discover_fallback")
 
-        return Resolution(generic_merchant(cleaned), "Uncategorized",
+        return Resolution(generic_merchant(cleaned, self.loc_tokens), "Uncategorized",
                           matched_rule="none")

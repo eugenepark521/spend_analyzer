@@ -36,6 +36,12 @@ ENV = {
 }
 STAGES = ["sample/make_sample_data.py", "clean.py", "categorize.py",
           "analyze.py", "anomalies.py", "export_dashboard_data.py"]
+# The tracked analysis.md is rendered from the sample metrics, so the document
+# in the repo is reproducible rather than hand-maintained. The real one is
+# rendered locally to the gitignored analysis.local.md:
+#   .venv/bin/python render_analysis.py \
+#       --metrics dashboard/data/metrics.json --out analysis.local.md
+RENDER = ["render_analysis.py", "--metrics", str(OUT), "--out", "analysis.md"]
 
 
 def ensure_benchmark():
@@ -71,7 +77,15 @@ def main():
         # Stage reports are long; show the lines that prove the stage worked.
         tail = [ln for ln in r.stdout.splitlines() if ln.strip()][-6:]
         print("\n".join(tail))
-    print(f"\nWrote {OUT.relative_to(ROOT)}")
+
+    print("\n=== render_analysis.py ===")
+    r = subprocess.run([sys.executable, *RENDER], env=ENV, cwd=ROOT,
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        sys.stderr.write(r.stderr)
+        sys.exit("render_analysis.py failed")
+    print(r.stdout.strip())
+    print(f"\nWrote {OUT.relative_to(ROOT)} and analysis.md")
 
 
 if __name__ == "__main__":
