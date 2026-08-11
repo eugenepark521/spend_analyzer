@@ -16,6 +16,7 @@ Run: .venv/bin/python analyze.py
 import pandas as pd
 
 from categorize import load_benchmark
+from config import CLEAN_DIR
 from normalize import Resolver
 
 # Fixed vs discretionary judgement call (documented in analysis.md): fixed =
@@ -103,9 +104,12 @@ def compute_metrics(df: pd.DataFrame, resolver: Resolver) -> dict:
 
     cv_recent, cv_prior = cv(last6), cv(prior6)
 
+    account_spans = {a: {"start": g["date"].min(), "end": g["date"].max()}
+                     for a, g in df.groupby("account")}
     return {
         "date_min": df["date"].min(), "date_max": df["date"].max(),
         "rows": len(df), "cov": cov, "full_months": full_months,
+        "account_spans": account_spans,
         "q1": {"months": q1_months, "windows": q1_windows,
                "monthly_full": monthly_full},
         "q2": {"start": str(start.date()), "end": str(end.date()),
@@ -124,7 +128,7 @@ def compute_metrics(df: pd.DataFrame, resolver: Resolver) -> dict:
 
 def main():
     resolver = Resolver()
-    df = pd.read_csv("clean/transactions_categorized.csv")
+    df = pd.read_csv(CLEAN_DIR / "transactions_categorized.csv")
     M = compute_metrics(df, resolver)
 
     print("=== Coverage: row counts by month x account ===")

@@ -1,0 +1,76 @@
+# categories.sample.yaml — matching rules for the synthetic sample only.
+#
+# Loaded INSTEAD of the personal categories.local.yaml when
+# SPEND_CATEGORIES_LOCAL points here (build_sample.py does this), so a sample
+# run never loads a real name or a real transaction detail. Merged by
+# normalize.Resolver: these list sections are appended after the tracked rules
+# in categories.yaml, so the impersonal rules still apply first.
+#
+# Every merchant and counterparty below is invented.
+
+income_patterns:
+  - 'RIVERTON UNIV PAYROLL'          # work-study paycheck
+  - 'RIVERTON UNIV STUDENT AID'      # financial-aid disbursement
+  - '^PENNYLOOM PAYOUTS'             # marketplace seller payout (ACH credit)
+
+# Housemate's monthly rent share: the description names a person, never the
+# purpose, so it can only be hand-tagged. Matched on (date, |amount|); each
+# must hit exactly one row or categorize.py fails loudly.
+transaction_overrides:
+  - {date: '2024-09-03', amount: 395.00, category: Housing}
+  - {date: '2024-10-03', amount: 395.00, category: Housing}
+  - {date: '2024-11-03', amount: 395.00, category: Housing}
+  - {date: '2024-12-03', amount: 395.00, category: Housing}
+  - {date: '2025-01-03', amount: 395.00, category: Housing}
+  - {date: '2025-02-03', amount: 395.00, category: Housing}
+
+peer:
+  overrides:
+    - match: 'ZIPLANE'
+      category: Transportation
+
+merchants:
+  # --- housing: rent, dorm, utilities, phone ---
+  - {match: 'BRIAR CREEK APTS', merchant: BRIAR CREEK APARTMENTS, category: Housing}
+  - {match: 'RIVERTON U HOUSING', merchant: RIVERTON U HOUSING (DORM), category: Housing}
+  - {match: 'CASCADE POWER', merchant: CASCADE POWER + WATER, category: Housing}
+  - {match: 'VANTA MOBILE', merchant: VANTA MOBILE, category: Housing}          # BLS: telephone services
+  - {match: 'CASCADE HOME SUPPLY', merchant: CASCADE HOME SUPPLY, category: Housing}
+  - {match: 'PIONEER FIBER', merchant: PIONEER FIBER INTERNET, category: Housing}
+  - {match: 'HARBORLIGHT RENTERS', merchant: HARBORLIGHT RENTERS INSURANCE, category: Housing}
+
+  # --- education ---
+  - {match: 'RIVERTON UNIV TUITION', merchant: RIVERTON U TUITION, category: Education}
+  - {match: 'RIVERTON U BOOKSTORE|RIVERTON U BKSTR', merchant: RIVERTON U BOOKSTORE, category: Education}
+
+  # --- food (several raw spellings each -> one canonical name) ---
+  - {match: 'NIMBUS COFFEE', merchant: NIMBUS COFFEE, category: Food}
+  - {match: 'CALDER DINER', merchant: CALDER DINER, category: Food}
+  - {match: 'HALLOW BOWL', merchant: HALLOW BOWL NOODLE, category: Food}
+  - {match: 'FERNWOOD MARKET', merchant: FERNWOOD MARKET, category: Food}
+  - {match: 'RIVERTON U DINING', merchant: RIVERTON U DINING HALL, category: Food}
+  - {match: 'QUICKSTOP', merchant: QUICKSTOP, category: Food}
+
+  # --- transportation ---
+  - {match: 'RIVERTON TRANSIT', merchant: RIVERTON TRANSIT, category: Transportation}
+  - {match: 'COASTLINE COACH', merchant: COASTLINE COACH LINES, category: Transportation}
+  - {match: 'SPOKE ?\+? ?(AND )?SPROCKET', merchant: SPOKE + SPROCKET CYCLES, category: Transportation}
+
+  # --- healthcare ---
+  - {match: 'MERIDIAN DENTAL', merchant: MERIDIAN DENTAL, category: Healthcare}
+  - {match: 'MERIDIAN PHARMACY', merchant: MERIDIAN PHARMACY, category: Healthcare}
+
+  # --- apparel / personal care / entertainment ---
+  - {match: 'THISTLE ?\+? ?(AND )?THREAD|THISTLETHR', merchant: THISTLE + THREAD, category: Apparel and services}
+  - {match: 'ALDER LANE BARBERS', merchant: ALDER LANE BARBERS, category: Personal care products and services}
+  - {match: 'HOLLIS ATHLETIC|HOLLISATHLE', merchant: HOLLIS ATHLETIC CLUB, category: Personal care products and services}
+  - {match: 'QUILLSTREAM', merchant: QUILLSTREAM, category: Entertainment}
+  - {match: 'ORPHEUM SIX', merchant: ORPHEUM SIX CINEMA, category: Entertainment}
+  - {match: 'KESTREL GAMES', merchant: KESTREL GAMES, category: Entertainment}
+
+  # --- miscellaneous ---
+  - {match: 'HELIOGRAPH LAPTOPS', merchant: HELIOGRAPH LAPTOPS, category: Miscellaneous}
+
+  # --- deliberately Uncategorized: identifiable merchant, unknowable goods ---
+  - {match: '^MARKETPLACE ORDER', merchant: MARKETPLACE ORDER, category: Uncategorized}
+  - {match: 'KESTREL RESALE', merchant: KESTREL RESALE, category: Uncategorized}

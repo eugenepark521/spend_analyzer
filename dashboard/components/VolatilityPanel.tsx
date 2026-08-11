@@ -7,6 +7,18 @@ export default function VolatilityPanel({ q7 }: { q7: Metrics["q7_volatility"] }
     ...q7.categories.flatMap((c) => [c.cv, c.prior_cv ?? 0]),
   );
   const x = (v: number) => `${(100 * v) / maxCv}%`;
+  // Summarise what the numbers actually did rather than asserting a trend that
+  // only held for one dataset.
+  const comparable = q7.categories.filter((c) => c.prior_cv !== null);
+  const calmer = comparable.filter((c) => c.cv < (c.prior_cv as number)).length;
+  const trend =
+    comparable.length === 0
+      ? "No category has a prior-window figure to compare against."
+      : calmer === comparable.length
+        ? "Every comparable category is swinging less than before."
+        : calmer === 0
+          ? "Every comparable category is swinging more than before."
+          : `${calmer} of ${comparable.length} comparable categories are swinging less than before.`;
 
   return (
     <section className="panel" aria-labelledby="q7-h">
@@ -52,8 +64,8 @@ export default function VolatilityPanel({ q7 }: { q7: Metrics["q7_volatility"] }
       <p className="caption">
         {monthLabel(q7.window.recent.start)}–{monthLabel(q7.window.recent.end)} vs.{" "}
         {monthLabel(q7.window.prior.start)}–{monthLabel(q7.window.prior.end)}, full
-        two-account months only; categories averaging ≥ ${q7.min_monthly_avg}/month.
-        Every comparable category is swinging less than before.
+        two-account months only; categories averaging ≥ ${q7.min_monthly_avg}/month.{" "}
+        {trend}
       </p>
     </section>
   );

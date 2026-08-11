@@ -1,4 +1,4 @@
-import { loadMetrics } from "@/lib/metrics";
+import { isSample, loadMetrics } from "@/lib/metrics";
 import { dateLabel } from "@/lib/format";
 import HeroSavings from "@/components/HeroSavings";
 import MonthStrip from "@/components/MonthStrip";
@@ -13,17 +13,27 @@ import ForecastPanel from "@/components/ForecastPanel";
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const m = await loadMetrics();
+  const { metrics: m, sourceFile } = await loadMetrics();
   const { meta } = m;
+  const sample = isSample(m);
 
   return (
     <main className="shell">
       <header className="masthead">
-        <h1>Two years of spending, audited</h1>
+        <div className="title-row">
+          <h1>Two years of spending, audited</h1>
+          {/* Driven by meta.dataset, so it disappears by itself when the
+              pipeline is pointed at real data — it cannot be forgotten. */}
+          {sample && (
+            <span className="sample-flag">
+              Sample data — synthetic, not real finances
+            </span>
+          )}
+        </div>
         <p className="meta">
           {meta.rows.toLocaleString("en-US")} transactions · {meta.accounts.join(" + ")} ·{" "}
           {dateLabel(meta.date_range.start)} → {dateLabel(meta.date_range.end)} · generated{" "}
-          {meta.generated_at.slice(0, 10)} · source: metrics.json
+          {meta.generated_at.slice(0, 10)} · source: {sourceFile}
         </p>
       </header>
 

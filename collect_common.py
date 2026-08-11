@@ -16,7 +16,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from ingest import ingest_file
+from ingest import dest_path, ingest_file
 
 DOWNLOADS = Path("~/Downloads").expanduser()
 
@@ -45,9 +45,9 @@ def count_rows(path: Path) -> int:
 
 
 def collect(source_path: Path, source_name: str, scrub: bool, force: bool) -> None:
-    raw_dir = Path("raw")
-    pull_date = date.today().isoformat()
-    target = raw_dir / f"{source_name}_{pull_date}{source_path.suffix}"
+    # Ask ingest where the file will land rather than recomputing it here —
+    # two copies of this path could disagree and back up the wrong file.
+    target = dest_path(source_name, source_path.suffix)
 
     existed_before = target.exists()
     backup = None

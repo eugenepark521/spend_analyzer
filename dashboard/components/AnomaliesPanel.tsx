@@ -6,6 +6,9 @@ import { money, monthLabel } from "@/lib/format";
 export default function AnomaliesPanel({ q5 }: { q5: Metrics["q5_anomalies"] }) {
   const hasFlags = q5.flagged.length > 0;
   const list = hasFlags ? q5.flagged : q5.near_misses;
+  // Derived, not asserted: naming the categories the retrospective run flagged
+  // keeps this line true of whatever dataset is loaded.
+  const retroCategories = [...new Set(q5.retro.flagged.map((t) => t.category))];
 
   return (
     <section className="panel" aria-labelledby="q5-h">
@@ -28,7 +31,9 @@ export default function AnomaliesPanel({ q5 }: { q5: Metrics["q5_anomalies"] }) 
       <p className="caption">
         Flag at score ≥ {q5.threshold} vs. my own {q5.baseline.n}-transaction
         year. Same rules on last year: {q5.retro.flagged.length} of {q5.retro.n}{" "}
-        flagged — all legitimate one-offs (tuition, rent).
+        flagged
+        {retroCategories.length > 0 && <> — all in {retroCategories.join(", ")}</>}
+        .
       </p>
     </section>
   );

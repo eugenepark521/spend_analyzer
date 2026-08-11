@@ -17,6 +17,8 @@ from pathlib import Path
 
 import yaml
 
+from config import CATEGORIES_LOCAL
+
 RULES_PATH = Path(__file__).parent / "categories.yaml"
 
 # Junk stripped from descriptions before any matching: processor/reference IDs,
@@ -108,7 +110,22 @@ class Resolver:
         # identifiable data. Local list sections are appended after the
         # tracked ones; without the file the pipeline still runs, but those
         # rows fall back to the impersonal defaults (peer Miscellaneous).
-        local_path = rules_path.with_name("categories.local.yaml")
+        # SPEND_CATEGORIES_LOCAL replaces that file (the sample run points it
+        # at sample/categories.sample.yaml, so no personal rule is loaded).
+        # An explicitly-requested overlay that is missing is a hard error: a
+        # silently-skipped overlay drops every override and income pattern and
+        # still exits 0, which mis-categorises the whole dataset invisibly.
+        # (Pass an absolute path — a relative one resolves against the CWD,
+        # while the default resolves next to categories.yaml.)
+        if CATEGORIES_LOCAL:
+            local_path = Path(CATEGORIES_LOCAL)
+            if not local_path.exists():
+                raise FileNotFoundError(
+                    f"SPEND_CATEGORIES_LOCAL is set to {CATEGORIES_LOCAL!r} but "
+                    f"no such file exists (resolved: {local_path.resolve()}). "
+                    f"Unset it to use the default overlay.")
+        else:
+            local_path = rules_path.with_name("categories.local.yaml")
         if local_path.exists():
             local = yaml.safe_load(local_path.read_text()) or {}
             for key in ("transfer_patterns", "income_patterns",

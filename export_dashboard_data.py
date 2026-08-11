@@ -10,16 +10,17 @@ Run: .venv/bin/python export_dashboard_data.py   (after categorize.py)
 """
 
 import json
+import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pandas as pd
 
 from analyze import compute_metrics
 from anomalies import FLAG_AT, MIN_N, compute_anomalies
+from config import CLEAN_DIR, DATASET, METRICS_OUT
 from normalize import Resolver
 
-OUT = Path("dashboard/data/metrics.json")
+OUT = METRICS_OUT
 NEAR_MISSES = 5  # top |score| rows shown when nothing is flagged
 
 
@@ -35,9 +36,26 @@ def tx_records(rows: pd.DataFrame) -> list[dict]:
             for _, r in rows.iterrows()]
 
 
+def check_output_matches_dataset():
+    """The sample file is the ONE thing dashboard/.gitignore force-tracks and
+    the deploy serves, so writing anything else there would publish it. The
+    output path and the dataset stamp must therefore agree in both directions:
+    real data can never land in the sample file, and sample data can never
+    masquerade as the personal export."""
+    is_sample_path = OUT.name == "sample.metrics.json"
+    if is_sample_path and DATASET != "sample":
+        sys.exit(f"Refusing to write {OUT}: that file is tracked and deployed, "
+                 f"but SPEND_DATASET is {DATASET!r}. Set SPEND_DATASET=sample "
+                 f"(or use build_sample.py).")
+    if DATASET == "sample" and not is_sample_path:
+        sys.exit(f"Refusing to write {OUT}: SPEND_DATASET=sample must be "
+                 f"written to a file named sample.metrics.json.")
+
+
 def main():
+    check_output_matches_dataset()
     resolver = Resolver()
-    df = pd.read_csv("clean/transactions_categorized.csv")
+    df = pd.read_csv(CLEAN_DIR / "transactions_categorized.csv")
     M = compute_metrics(df, resolver)
     A = compute_anomalies(df)
 
@@ -50,6 +68,9 @@ def main():
 
     metrics = {
         "meta": {
+            # "sample" => synthetic demo data; the dashboard labels the page
+            # from this field alone, so the label can never be forgotten.
+            "dataset": DATASET,
             "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "date_range": {"start": M["date_min"], "end": M["date_max"]},
             "rows": M["rows"],
@@ -59,11 +80,16 @@ def main():
                           "full": m in fm}
                          for m in cov.index],
             "full_months": {"start": fm[0], "end": fm[-1], "count": len(fm)},
+            "account_spans": M["account_spans"],
+            # Derived per account — never hardcoded, so the note stays true of
+            # whatever dataset was actually processed.
             "coverage_note": (
                 f"Months outside {fm[0]}..{fm[-1]} have partial account "
-                f"coverage (Chase starts {M['date_min']}, Discover 2024-09-17; "
-                f"the export ends {M['date_max']}) and are excluded from all "
-                f"monthly series."),
+                f"coverage ("
+                + ", ".join(f"{a} starts {s['start']}"
+                            for a, s in sorted(M["account_spans"].items()))
+                + f"; the export ends {M['date_max']}) and are excluded from "
+                f"all monthly series."),
         },
         "q1_savings": {
             "current": {"start": cur["months"][0], "end": cur["months"][-1],
@@ -125,12 +151,15 @@ def main():
         },
         "q6_forecast": {
             "available": False,
-            "reason": ("No forecast is produced, deliberately: task 15 chose "
-                       "anomaly detection over forecasting — ~24 monthly "
-                       "observations, structurally lumpy top categories "
-                       "(tuition, rent), and a US-to-Japan regime change in "
-                       "June 2026 make a category-level monthly forecast "
-                       "unfittable and unvalidatable."),
+            # Dataset-independent on purpose: the reasoning is structural, and
+            # this string is published, so it must not describe the author's
+            # own circumstances.
+            "reason": ("No forecast is produced, deliberately: the modelling "
+                       "stage chose anomaly detection over forecasting — about "
+                       "two years of monthly observations, structurally lumpy "
+                       "top categories (tuition, rent), and a mid-series change "
+                       "in spending pattern make a category-level monthly "
+                       "forecast unfittable and unvalidatable."),
             "details": "analysis.md — 'Why this over forecasting'",
         },
         "q7_volatility": {

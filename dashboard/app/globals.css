@@ -78,6 +78,25 @@ body {
   font-weight: 700;
   letter-spacing: -0.02em;
 }
+.title-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+/* Claret is the status ink of the palette (DESIGN.md): text + hairline only,
+   never a fill competing with the pine data marks. */
+.sample-flag {
+  font-family: var(--font-data);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--claret);
+  border: 1px solid rgba(179, 55, 44, 0.35);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
 .meta {
   font-family: var(--font-data);
   font-size: 10.5px;
@@ -114,6 +133,7 @@ body {
 .hero-sub { font-size: 12px; color: #d5ddd8; }
 .hero-sub strong { color: #fff; font-weight: 600; }
 .hero-down { color: #ffb0a5; }
+.hero-up { color: #9fe0b8; }
 
 /* ---------- panels ---------- */
 .grid {

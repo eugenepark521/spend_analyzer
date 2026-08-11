@@ -15,6 +15,9 @@ export interface Tx {
 
 export interface Metrics {
   meta: {
+    // "sample" => synthetic demo data. Absent on files generated before this
+    // field existed, which were always personal — hence the default below.
+    dataset?: "sample" | "personal";
     generated_at: string;
     date_range: { start: string; end: string };
     rows: number;
@@ -84,9 +87,27 @@ interface Window {
 interface Split { fixed: number; total: number; fixed_share: number }
 interface Span { start: string; end: string }
 
-// Swappable data path (task 19 points this at a synthetic sample file):
-// METRICS_PATH, absolute or relative to the dashboard directory.
-export async function loadMetrics(): Promise<Metrics> {
-  const p = path.resolve(process.cwd(), process.env.METRICS_PATH ?? "data/metrics.json");
-  return JSON.parse(await readFile(p, "utf8")) as Metrics;
+// The default is the SYNTHETIC sample, deliberately: a deploy that sets
+// nothing — or is misconfigured — serves demo data, never real finances.
+// Personal use is the opt-in:
+//   METRICS_PATH=data/metrics.json npm run dev
+// Path is absolute or relative to the dashboard directory.
+export const SAMPLE_METRICS = "data/sample.metrics.json";
+
+export interface LoadedMetrics {
+  metrics: Metrics;
+  /** Basename of the file actually read — the masthead states this as
+   *  provenance, so it must come from the path, never be inferred. */
+  sourceFile: string;
 }
+
+export async function loadMetrics(): Promise<LoadedMetrics> {
+  const p = path.resolve(process.cwd(), process.env.METRICS_PATH ?? SAMPLE_METRICS);
+  const m = JSON.parse(await readFile(p, "utf8")) as Metrics;
+  return {
+    metrics: { ...m, meta: { dataset: "personal", ...m.meta } },
+    sourceFile: path.basename(p),
+  };
+}
+
+export const isSample = (m: Metrics) => m.meta.dataset === "sample";

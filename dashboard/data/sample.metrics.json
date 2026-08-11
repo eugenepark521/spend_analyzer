@@ -1,0 +1,774 @@
+{
+ "meta": {
+  "dataset": "sample",
+  "generated_at": "2026-08-10T14:16:31+00:00",
+  "date_range": {
+   "start": "2023-02-14",
+   "end": "2025-03-12"
+  },
+  "rows": 1588,
+  "accounts": [
+   "chase",
+   "discover"
+  ],
+  "coverage": [
+   {
+    "month": "2023-02",
+    "rows": {
+     "chase": 26,
+     "discover": 0
+    },
+    "full": false
+   },
+   {
+    "month": "2023-03",
+    "rows": {
+     "chase": 58,
+     "discover": 0
+    },
+    "full": false
+   },
+   {
+    "month": "2023-04",
+    "rows": {
+     "chase": 30,
+     "discover": 24
+    },
+    "full": false
+   },
+   {
+    "month": "2023-05",
+    "rows": {
+     "chase": 40,
+     "discover": 21
+    },
+    "full": true
+   },
+   {
+    "month": "2023-06",
+    "rows": {
+     "chase": 33,
+     "discover": 24
+    },
+    "full": true
+   },
+   {
+    "month": "2023-07",
+    "rows": {
+     "chase": 38,
+     "discover": 26
+    },
+    "full": true
+   },
+   {
+    "month": "2023-08",
+    "rows": {
+     "chase": 30,
+     "discover": 35
+    },
+    "full": true
+   },
+   {
+    "month": "2023-09",
+    "rows": {
+     "chase": 32,
+     "discover": 31
+    },
+    "full": true
+   },
+   {
+    "month": "2023-10",
+    "rows": {
+     "chase": 39,
+     "discover": 28
+    },
+    "full": true
+   },
+   {
+    "month": "2023-11",
+    "rows": {
+     "chase": 39,
+     "discover": 21
+    },
+    "full": true
+   },
+   {
+    "month": "2023-12",
+    "rows": {
+     "chase": 35,
+     "discover": 40
+    },
+    "full": true
+   },
+   {
+    "month": "2024-01",
+    "rows": {
+     "chase": 47,
+     "discover": 25
+    },
+    "full": true
+   },
+   {
+    "month": "2024-02",
+    "rows": {
+     "chase": 34,
+     "discover": 21
+    },
+    "full": true
+   },
+   {
+    "month": "2024-03",
+    "rows": {
+     "chase": 41,
+     "discover": 18
+    },
+    "full": true
+   },
+   {
+    "month": "2024-04",
+    "rows": {
+     "chase": 41,
+     "discover": 27
+    },
+    "full": true
+   },
+   {
+    "month": "2024-05",
+    "rows": {
+     "chase": 36,
+     "discover": 33
+    },
+    "full": true
+   },
+   {
+    "month": "2024-06",
+    "rows": {
+     "chase": 29,
+     "discover": 34
+    },
+    "full": true
+   },
+   {
+    "month": "2024-07",
+    "rows": {
+     "chase": 32,
+     "discover": 25
+    },
+    "full": true
+   },
+   {
+    "month": "2024-08",
+    "rows": {
+     "chase": 40,
+     "discover": 28
+    },
+    "full": true
+   },
+   {
+    "month": "2024-09",
+    "rows": {
+     "chase": 37,
+     "discover": 30
+    },
+    "full": true
+   },
+   {
+    "month": "2024-10",
+    "rows": {
+     "chase": 38,
+     "discover": 28
+    },
+    "full": true
+   },
+   {
+    "month": "2024-11",
+    "rows": {
+     "chase": 29,
+     "discover": 26
+    },
+    "full": true
+   },
+   {
+    "month": "2024-12",
+    "rows": {
+     "chase": 27,
+     "discover": 33
+    },
+    "full": true
+   },
+   {
+    "month": "2025-01",
+    "rows": {
+     "chase": 32,
+     "discover": 37
+    },
+    "full": true
+   },
+   {
+    "month": "2025-02",
+    "rows": {
+     "chase": 41,
+     "discover": 26
+    },
+    "full": true
+   },
+   {
+    "month": "2025-03",
+    "rows": {
+     "chase": 16,
+     "discover": 27
+    },
+    "full": false
+   }
+  ],
+  "full_months": {
+   "start": "2023-05",
+   "end": "2025-02",
+   "count": 22
+  },
+  "account_spans": {
+   "chase": {
+    "start": "2023-02-14",
+    "end": "2025-03-12"
+   },
+   "discover": {
+    "start": "2023-04-06",
+    "end": "2025-03-12"
+   }
+  },
+  "coverage_note": "Months outside 2023-05..2025-02 have partial account coverage (chase starts 2023-02-14, discover starts 2023-04-06; the export ends 2025-03-12) and are excluded from all monthly series."
+ },
+ "q1_savings": {
+  "current": {
+   "start": "2024-09",
+   "end": "2025-02",
+   "income": 14368.61,
+   "spend": 22851.5,
+   "rate": -59.0
+  },
+  "prior": {
+   "start": "2024-03",
+   "end": "2024-08",
+   "income": 6384.9,
+   "spend": 18119.95,
+   "rate": -183.8
+  },
+  "monthly": [
+   {
+    "month": "2023-05",
+    "income": 816.35,
+    "spend": 752.57,
+    "rate": 7.8
+   },
+   {
+    "month": "2023-06",
+    "income": 912.92,
+    "spend": 710.81,
+    "rate": 22.1
+   },
+   {
+    "month": "2023-07",
+    "income": 925.07,
+    "spend": 877.76,
+    "rate": 5.1
+   },
+   {
+    "month": "2023-08",
+    "income": 931.77,
+    "spend": 793.12,
+    "rate": 14.9
+   },
+   {
+    "month": "2023-09",
+    "income": 5384.01,
+    "spend": 4906.25,
+    "rate": 8.9
+   },
+   {
+    "month": "2023-10",
+    "income": 948.78,
+    "spend": 1388.16,
+    "rate": -46.3
+   },
+   {
+    "month": "2023-11",
+    "income": 872.88,
+    "spend": 1447.65,
+    "rate": -65.8
+   },
+   {
+    "month": "2023-12",
+    "income": 1025.18,
+    "spend": 1724.3,
+    "rate": -68.2
+   },
+   {
+    "month": "2024-01",
+    "income": 5060.13,
+    "spend": 5178.5,
+    "rate": -2.3
+   },
+   {
+    "month": "2024-02",
+    "income": 837.4,
+    "spend": 1707.03,
+    "rate": -103.8
+   },
+   {
+    "month": "2024-03",
+    "income": 1327.99,
+    "spend": 2619.95,
+    "rate": -97.3
+   },
+   {
+    "month": "2024-04",
+    "income": 841.46,
+    "spend": 3040.59,
+    "rate": -261.3
+   },
+   {
+    "month": "2024-05",
+    "income": 959.99,
+    "spend": 3142.8,
+    "rate": -227.4
+   },
+   {
+    "month": "2024-06",
+    "income": 872.38,
+    "spend": 3479.95,
+    "rate": -298.9
+   },
+   {
+    "month": "2024-07",
+    "income": 1014.74,
+    "spend": 2732.43,
+    "rate": -169.3
+   },
+   {
+    "month": "2024-08",
+    "income": 1368.34,
+    "spend": 3104.23,
+    "rate": -126.9
+   },
+   {
+    "month": "2024-09",
+    "income": 5264.9,
+    "spend": 6057.43,
+    "rate": -15.1
+   },
+   {
+    "month": "2024-10",
+    "income": 828.84,
+    "spend": 3069.2,
+    "rate": -270.3
+   },
+   {
+    "month": "2024-11",
+    "income": 779.15,
+    "spend": 2138.38,
+    "rate": -174.5
+   },
+   {
+    "month": "2024-12",
+    "income": 911.95,
+    "spend": 2394.25,
+    "rate": -162.5
+   },
+   {
+    "month": "2025-01",
+    "income": 5632.01,
+    "spend": 6291.08,
+    "rate": -11.7
+   },
+   {
+    "month": "2025-02",
+    "income": 951.76,
+    "spend": 2901.16,
+    "rate": -204.8
+   }
+  ]
+ },
+ "q2_budget": {
+  "window": {
+   "start": "2024-12-13",
+   "end": "2025-03-12",
+   "days": 90
+  },
+  "budget_monthly": 1000.0,
+  "budget_prorated": 2956.88,
+  "actual": 17513.5,
+  "overage": 14556.62,
+  "categories": [
+   {
+    "category": "Housing",
+    "amount": 5223.24,
+    "pct_of_overage": 35.9
+   },
+   {
+    "category": "Education",
+    "amount": 3673.32,
+    "pct_of_overage": 25.2
+   },
+   {
+    "category": "Healthcare",
+    "amount": 3014.99,
+    "pct_of_overage": 20.7
+   },
+   {
+    "category": "Food",
+    "amount": 2841.22,
+    "pct_of_overage": 19.5
+   },
+   {
+    "category": "Miscellaneous",
+    "amount": 1834.05,
+    "pct_of_overage": 12.6
+   },
+   {
+    "category": "Transportation",
+    "amount": 464.95,
+    "pct_of_overage": 3.2
+   },
+   {
+    "category": "Entertainment",
+    "amount": 172.6,
+    "pct_of_overage": 1.2
+   },
+   {
+    "category": "Apparel and services",
+    "amount": 151.24,
+    "pct_of_overage": 1.0
+   },
+   {
+    "category": "Personal care products and services",
+    "amount": 107.75,
+    "pct_of_overage": 0.7
+   },
+   {
+    "category": "Uncategorized",
+    "amount": 30.14,
+    "pct_of_overage": 0.2
+   }
+  ]
+ },
+ "q3_benchmark": {
+  "source": "Benchmark: bls_2026-07-30.xlsx, column 'Less than $15,000' (avg annual expenditures $25,041)",
+  "my_total": 74265.31,
+  "bench_total": 25041.0,
+  "categories": [
+   {
+    "category": "Food",
+    "my_amount": 15553.6,
+    "my_share": 20.9,
+    "bls_amount": 3490.0,
+    "bls_share": 13.9,
+    "diff_pp": 7.0
+   },
+   {
+    "category": "Alcoholic beverages",
+    "my_amount": 0.0,
+    "my_share": 0.0,
+    "bls_amount": 177.0,
+    "bls_share": 0.7,
+    "diff_pp": -0.7
+   },
+   {
+    "category": "Housing",
+    "my_amount": 28622.54,
+    "my_share": 38.5,
+    "bls_amount": 9147.0,
+    "bls_share": 36.5,
+    "diff_pp": 2.0
+   },
+   {
+    "category": "Apparel and services",
+    "my_amount": 1295.5,
+    "my_share": 1.7,
+    "bls_amount": 843.0,
+    "bls_share": 3.4,
+    "diff_pp": -1.6
+   },
+   {
+    "category": "Transportation",
+    "my_amount": 3421.27,
+    "my_share": 4.6,
+    "bls_amount": 2867.0,
+    "bls_share": 11.4,
+    "diff_pp": -6.8
+   },
+   {
+    "category": "Healthcare",
+    "my_amount": 3491.55,
+    "my_share": 4.7,
+    "bls_amount": 585.0,
+    "bls_share": 2.3,
+    "diff_pp": 2.4
+   },
+   {
+    "category": "Entertainment",
+    "my_amount": 919.62,
+    "my_share": 1.2,
+    "bls_amount": 833.0,
+    "bls_share": 3.3,
+    "diff_pp": -2.1
+   },
+   {
+    "category": "Personal care products and services",
+    "my_amount": 567.28,
+    "my_share": 0.8,
+    "bls_amount": 555.0,
+    "bls_share": 2.2,
+    "diff_pp": -1.5
+   },
+   {
+    "category": "Reading",
+    "my_amount": 0.0,
+    "my_share": 0.0,
+    "bls_amount": 94.0,
+    "bls_share": 0.4,
+    "diff_pp": -0.4
+   },
+   {
+    "category": "Education",
+    "my_amount": 17214.5,
+    "my_share": 23.2,
+    "bls_amount": 5408.0,
+    "bls_share": 21.6,
+    "diff_pp": 1.6
+   },
+   {
+    "category": "Tobacco products and smoking supplies",
+    "my_amount": 0.0,
+    "my_share": 0.0,
+    "bls_amount": 129.0,
+    "bls_share": 0.5,
+    "diff_pp": -0.5
+   },
+   {
+    "category": "Miscellaneous",
+    "my_amount": 2080.2,
+    "my_share": 2.8,
+    "bls_amount": 144.0,
+    "bls_share": 0.6,
+    "diff_pp": 2.2
+   },
+   {
+    "category": "Cash contributions",
+    "my_amount": 0.0,
+    "my_share": 0.0,
+    "bls_amount": 177.0,
+    "bls_share": 0.7,
+    "diff_pp": -0.7
+   },
+   {
+    "category": "Personal insurance and pensions",
+    "my_amount": 0.0,
+    "my_share": 0.0,
+    "bls_amount": 593.0,
+    "bls_share": 2.4,
+    "diff_pp": -2.4
+   }
+  ],
+  "uncategorized": {
+   "amount": 1099.25,
+   "share": 1.5
+  }
+ },
+ "q4_fixed": {
+  "fixed_categories": [
+   "Housing",
+   "Healthcare",
+   "Personal insurance and pensions",
+   "Education"
+  ],
+  "mine": {
+   "fixed": 49328.59,
+   "total": 74265.31,
+   "fixed_share": 66.4
+  },
+  "benchmark": {
+   "fixed": 15733.0,
+   "total": 25041.0,
+   "fixed_share": 62.8
+  }
+ },
+ "q5_anomalies": {
+  "month": "2025-03",
+  "scored": 43,
+  "threshold": 3.5,
+  "flagged": [
+   {
+    "date": "2025-03-04",
+    "merchant": "MERIDIAN DENTAL",
+    "amount": 2940.0,
+    "category": "Healthcare",
+    "model": "global",
+    "score": 5.09
+   },
+   {
+    "date": "2025-03-10",
+    "merchant": "HELIOGRAPH LAPTOPS",
+    "amount": 1815.0,
+    "category": "Miscellaneous",
+    "model": "global",
+    "score": 4.59
+   }
+  ],
+  "near_misses": [
+   {
+    "date": "2025-03-04",
+    "merchant": "MERIDIAN DENTAL",
+    "amount": 2940.0,
+    "category": "Healthcare",
+    "model": "global",
+    "score": 5.09
+   },
+   {
+    "date": "2025-03-10",
+    "merchant": "HELIOGRAPH LAPTOPS",
+    "amount": 1815.0,
+    "category": "Miscellaneous",
+    "model": "global",
+    "score": 4.59
+   },
+   {
+    "date": "2025-03-01",
+    "merchant": "BRIAR CREEK APARTMENTS",
+    "amount": 1185.0,
+    "category": "Housing",
+    "model": "Housing",
+    "score": 2.54
+   },
+   {
+    "date": "2025-03-07",
+    "merchant": "CASCADE HOME SUPPLY",
+    "amount": 399.06,
+    "category": "Housing",
+    "model": "Housing",
+    "score": 1.53
+   },
+   {
+    "date": "2025-03-11",
+    "merchant": "NIMBUS COFFEE",
+    "amount": 4.72,
+    "category": "Food",
+    "model": "Food",
+    "score": -1.07
+   }
+  ],
+  "baseline": {
+   "start": "2024-03-01",
+   "end": "2025-02-28",
+   "n": 679
+  },
+  "models": [
+   {
+    "category": "Entertainment",
+    "n": 32
+   },
+   {
+    "category": "Food",
+    "n": 397
+   },
+   {
+    "category": "Housing",
+    "n": 89
+   },
+   {
+    "category": "Transportation",
+    "n": 73
+   }
+  ],
+  "min_n": 30,
+  "retro": {
+   "n": 679,
+   "flagged": [
+    {
+     "date": "2024-04-07",
+     "merchant": "KESTREL GAMES",
+     "amount": 26.65,
+     "category": "Entertainment",
+     "model": "Entertainment",
+     "score": 3.71
+    },
+    {
+     "date": "2024-05-14",
+     "merchant": "KESTREL GAMES",
+     "amount": 26.2,
+     "category": "Entertainment",
+     "model": "Entertainment",
+     "score": 3.61
+    },
+    {
+     "date": "2024-09-10",
+     "merchant": "RIVERTON U TUITION",
+     "amount": 3495.0,
+     "category": "Education",
+     "model": "global",
+     "score": 5.27
+    },
+    {
+     "date": "2025-01-21",
+     "merchant": "RIVERTON U TUITION",
+     "amount": 3495.0,
+     "category": "Education",
+     "model": "global",
+     "score": 5.27
+    },
+    {
+     "date": "2025-02-22",
+     "merchant": "KESTREL GAMES",
+     "amount": 28.93,
+     "category": "Entertainment",
+     "model": "Entertainment",
+     "score": 4.22
+    }
+   ]
+  }
+ },
+ "q6_forecast": {
+  "available": false,
+  "reason": "No forecast is produced, deliberately: the modelling stage chose anomaly detection over forecasting \u2014 about two years of monthly observations, structurally lumpy top categories (tuition, rent), and a mid-series change in spending pattern make a category-level monthly forecast unfittable and unvalidatable.",
+  "details": "analysis.md \u2014 'Why this over forecasting'"
+ },
+ "q7_volatility": {
+  "window": {
+   "recent": {
+    "start": "2024-09",
+    "end": "2025-02"
+   },
+   "prior": {
+    "start": "2024-03",
+    "end": "2024-08"
+   }
+  },
+  "min_monthly_avg": 50,
+  "categories": [
+   {
+    "category": "Education",
+    "cv": 1.55,
+    "prior_cv": null
+   },
+   {
+    "category": "Apparel and services",
+    "cv": 1.18,
+    "prior_cv": null
+   },
+   {
+    "category": "Transportation",
+    "cv": 0.28,
+    "prior_cv": 0.29
+   },
+   {
+    "category": "Housing",
+    "cv": 0.21,
+    "prior_cv": 0.14
+   },
+   {
+    "category": "Food",
+    "cv": 0.16,
+    "prior_cv": 0.17
+   }
+  ]
+ }
+}

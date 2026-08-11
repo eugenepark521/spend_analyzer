@@ -16,6 +16,8 @@ import sys
 from pathlib import Path
 from datetime import date
 
+from config import RAW_DIR
+
 # Patterns that look like account/card numbers or bank-assigned reference
 # IDs. Applied to every cell, not just specific columns, so nothing slips
 # through in a description field.
@@ -38,12 +40,22 @@ def scrub_cell(value: str) -> str:
     return value
 
 
-def ingest_file(source_path: Path, source_name: str, scrub: bool = True) -> Path:
-    raw_dir = Path("raw")
-    raw_dir.mkdir(exist_ok=True)
+def dest_path(source_name: str, suffix: str, out_dir: Path | None = None,
+              pull_date: str | None = None) -> Path:
+    """The single definition of where an ingested pull lands. collect_common
+    needs the same answer for its backup/restore, and computing it twice let
+    the two drift apart."""
+    raw_dir = RAW_DIR if out_dir is None else Path(out_dir)
+    return raw_dir / f"{source_name}_{pull_date or date.today().isoformat()}{suffix}"
 
-    pull_date = date.today().isoformat()
-    out_path = raw_dir / f"{source_name}_{pull_date}{source_path.suffix}"
+
+def ingest_file(source_path: Path, source_name: str, scrub: bool = True,
+                out_dir: Path | None = None, pull_date: str | None = None) -> Path:
+    # out_dir/pull_date are overridable so the synthetic sample can be scrubbed
+    # by this same code into its own tracked directory (sample/), instead of
+    # only ever landing in the gitignored raw/ under today's date.
+    out_path = dest_path(source_name, source_path.suffix, out_dir, pull_date)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if not scrub:
         out_path.write_bytes(source_path.read_bytes())
@@ -75,7 +87,15 @@ def ingest_file(source_path: Path, source_name: str, scrub: bool = True) -> Path
     print(f"Wrote scrubbed copy to {out_path}")
     if dropped:
         print(f"Dropped columns entirely: {dropped}")
-    print("Reminder: raw/ and *.csv are gitignored — this file will not be committed.")
+    # Only the repo's default raw/ is known-gitignored. A configured
+    # SPEND_RAW_DIR or out_dir may be anywhere, and telling someone their file
+    # is safely ignored when it is not is exactly the wrong reassurance.
+    if out_path.parent == Path("raw"):
+        print("Reminder: raw/ and *.csv are gitignored — "
+              "this file will not be committed.")
+    else:
+        print(f"Note: wrote outside the default raw/ — confirm .gitignore "
+              f"covers {out_path} before committing.")
     return out_path
 
 

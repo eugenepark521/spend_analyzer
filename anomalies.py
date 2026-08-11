@@ -15,6 +15,8 @@ Run: .venv/bin/python anomalies.py
 import numpy as np
 import pandas as pd
 
+from config import CLEAN_DIR
+
 MIN_N = 30          # baseline transactions needed for per-category statistics
 FLAG_AT = 3.5       # |modified z| threshold (Iglewicz & Hoaglin's convention)
 CONSISTENCY = 0.6745  # makes MAD comparable to SD under normality
@@ -100,7 +102,7 @@ def _print_rows(rows: pd.DataFrame):
 
 
 def main():
-    df = pd.read_csv("clean/transactions_categorized.csv")
+    df = pd.read_csv(CLEAN_DIR / "transactions_categorized.csv")
     A = compute_anomalies(df)
     base, target = A["base"], A["target"]
 

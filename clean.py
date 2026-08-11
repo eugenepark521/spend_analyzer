@@ -19,10 +19,11 @@ from pathlib import Path
 
 import pandas as pd
 
+from config import CLEAN_DIR, RAW_DIR
 from normalize import Resolver
 
-RAW = Path("raw")
-OUT = Path("clean")
+RAW = RAW_DIR
+OUT = CLEAN_DIR
 KEY = ["account", "date", "merchant", "amount"]
 
 # FX descriptions embed the foreign amount and rate; the Amount column must be
@@ -116,7 +117,7 @@ def dedupe(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
 
 
 def main():
-    OUT.mkdir(exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)   # OUT is env-configurable; may nest
     resolver = Resolver()
 
     pulls: dict[str, dict[str, pd.DataFrame]] = {"chase": {}, "discover": {}}

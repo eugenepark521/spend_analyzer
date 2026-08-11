@@ -3,6 +3,17 @@ venv/
 raw/
 *.csv
 categories.local.yaml
+
+# sample/ is the TRACKED synthetic demo dataset (see build_sample.py) — the
+# *.csv rule above would otherwise swallow it. These four filenames are
+# whitelisted EXACTLY, not by glob: sample/ doubles as the sample run's
+# SPEND_RAW_DIR, so a broad !sample/*.csv would un-ignore any real export
+# that ever landed there.
+!sample/chase_2025-03-07.csv
+!sample/chase_2025-03-13.csv
+!sample/discover_2025-03-07.csv
+!sample/discover_2025-03-13.csv
+sample/clean/
 __pycache__/
 .env
 .DS_Store

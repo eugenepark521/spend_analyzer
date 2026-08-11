@@ -8,14 +8,14 @@ Run: .venv/bin/python categorize.py
 """
 
 import re
-from pathlib import Path
 
 import pandas as pd
 
+from config import BENCH_DIR, CLEAN_DIR
 from normalize import Resolver
 
-CLEAN = Path("clean")
-RAW = Path("raw")
+CLEAN = CLEAN_DIR
+RAW = BENCH_DIR
 BENCH_LABEL = "Less than $15,000"  # income bracket of the BLS cross-tab cell
 
 
